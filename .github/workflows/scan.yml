@@ -1,1 +1,34 @@
+name: Stock Screener Scan
 
+on:
+  schedule:
+    - cron: '0 5 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install yfinance pandas numpy
+
+      - name: Run scan
+        run: python generate.py
+
+      - name: Publish results
+        run: |
+          git config user.name "Screener Bot"
+          git config user.email "bot@screener"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "Scan $(date '+%d/%m/%Y %H:%M')"
+          git push
