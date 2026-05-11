@@ -497,19 +497,20 @@ tbody tr:hover td{{background:#152030!important}}
 </div>
 
 <script>
-// ── Mot de passe (changez-le ici) ─────────────────────────────
-const PWD_HASH = btoa('1510'); // encodé en base64
-function checkPwd() {{
+const PWD = '1510';
+
+function checkPwd() {
   const v = document.getElementById('pwd').value;
-  if (btoa(v) === PWD_HASH) {{
+  if (v === PWD) {
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     render();
-  }} else {{
+  } else {
     document.getElementById('err').textContent = '❌ Code incorrect';
     document.getElementById('pwd').value = '';
-  }}
-}}
+  }
+}
+
 
 // ── Données ───────────────────────────────────────────────────
 const RAW = {data_json};
