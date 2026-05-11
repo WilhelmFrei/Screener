@@ -498,9 +498,7 @@ tbody tr:hover td{{background:#152030!important}}
 
 <script>
 // ── Mot de passe (changez-le ici) ─────────────────────────────
-const PWD_HASH = btoa('VOTRE_MOT_DE_PASSE'); // encodé en base64
-// Pour changer : remplacez VOTRE_MOT_DE_PASSE par votre code
-
+const PWD_HASH = btoa('1510'); // encodé en base64
 function checkPwd() {{
   const v = document.getElementById('pwd').value;
   if (btoa(v) === PWD_HASH) {{
