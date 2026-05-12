@@ -498,23 +498,25 @@ tbody tr:hover td{{background:#152030!important}}
 
 <script>
 const PWD = '1510';
-function checkPwd() {{
-  try {{
+
+function checkPwd() {
+  try {
     var v = document.getElementById('pwd').value;
     var login = document.getElementById('login');
     var app = document.getElementById('app');
-    if (v === PWD) {{
+    if (v === PWD) {
       login.style.setProperty('display', 'none', 'important');
       app.style.setProperty('display', 'block', 'important');
       render();
-    }} else {{
+    } else {
       document.getElementById('err').textContent = 'Code incorrect';
       document.getElementById('pwd').value = '';
-    }}
-  }} catch(e) {{
+    }
+  } catch(e) {
     alert('Erreur: ' + e.message);
-  }}
-}}
+  }
+}
+
 
 
 // ── Données ───────────────────────────────────────────────────
