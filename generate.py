@@ -342,21 +342,6 @@ nb_scanned = len(tickers)
 # Les accolades JS sont donc simples, pas doublées
 JS = """
 <script>
-const PWD = '1510';
-
-function checkPwd() {
-  var v = document.getElementById('pwd').value;
-  var login = document.getElementById('login');
-  var app = document.getElementById('app');
-  if (v === PWD) {
-    login.style.display = 'none';
-    app.style.display = 'block';
-    render();
-  } else {
-    document.getElementById('err').textContent = 'Code incorrect';
-    document.getElementById('pwd').value = '';
-  }
-}
 
 const RAW = DATA_PLACEHOLDER;
 let mode='combine', curTab='all', sortCol='score', sortDir=-1;
@@ -556,22 +541,9 @@ html += '<title>Stock Screener</title>\n'
 html += CSS
 html += '</head>\n<body>\n'
 
-# Login
-html += '''
-<div id="login">
-  <div class="login-box">
-    <div style="font-size:40px;margin-bottom:10px">📡</div>
-    <h2>STOCK SCREENER</h2>
-    <p>Entrez votre code d'acces</p>
-    <input type="password" id="pwd" placeholder="••••" autocomplete="off">
-    <button onclick="checkPwd()">Acceder</button>
-    <div class="login-err" id="err"></div>
-  </div>
-</div>
-'''
 
 # App
-html += '<div id="app">\n'
+html += '<div id="app" style="display:block">\n'
 html += '  <div class="hdr">\n'
 html += '    <div><div class="hdr-title">📡 STOCK SCREENER</div>\n'
 html += '    <div class="hdr-sub">Yahoo Finance &middot; ' + str(nb_scanned) + ' actions &middot; ' + date_str + '</div></div>\n'
