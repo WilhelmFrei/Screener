@@ -528,9 +528,9 @@ page.append('var RAW = RAW_ORIG.slice();')
 page.append('var CFG = ' + CFG + ';')
 page.append('var IMP_DATA = null;')
 # Github info — à remplacer par l'utilisateur
-page.append('var GH_OWNER = "VOTRE_USERNAME";')
+page.append('var GH_OWNER = "WilhelmFrei";')
 page.append('var GH_REPO  = "screener";')
-page.append('var GH_TOKEN = "VOTRE_GH_TOKEN";')
+page.append('var GH_TOKEN = "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";')
 
 js = r"""
 var mode = "combine", curTab = "all", sortCol = "score", sortDir = -1;
