@@ -10,10 +10,10 @@ from pathlib import Path
 warnings.filterwarnings('ignore')
 
 # ══════════════════════════════════════════════════════════════
-# CONFIGURATION
+# CONFIGURATION DEFAUT
 # ══════════════════════════════════════════════════════════════
 SCORE_MIN        = 35
-TOP_N            = 150
+TOP_N            = 200
 JOURS_HISTORIQUE = 260
 POIDS_VALUE      = 30
 POIDS_GROWTH     = 25
@@ -200,34 +200,34 @@ def score_tech(hist):
         l = hist['Low'].dropna()
         if len(c) < 30:
             return 0, {}
-        r    = calc_rsi(c).iloc[-1]
+        r     = calc_rsi(c).iloc[-1]
         ml, ms, mh = calc_macd(c)
-        mh_v = mh.iloc[-1]; ml_v = ml.iloc[-1]; ms_v = ms.iloc[-1]
-        cc   = calc_cci(h, l, c).iloc[-1]
+        mh_v  = mh.iloc[-1]; ml_v = ml.iloc[-1]; ms_v = ms.iloc[-1]
+        cc    = calc_cci(h, l, c).iloc[-1]
         sk, _ = calc_stoch(h, l, c); st = sk.iloc[-1]
-        ax   = calc_adx(h, l, c).iloc[-1]
-        bb   = calc_boll(c).iloc[-1]
-        px   = float(c.iloc[-1])
-        mms  = {}
+        ax    = calc_adx(h, l, c).iloc[-1]
+        bb    = calc_boll(c).iloc[-1]
+        px    = float(c.iloc[-1])
+        mms   = {}
         for per in [20, 50, 200]:
             if len(c) >= per:
                 mms[per] = float(c.rolling(per).mean().iloc[-1])
         pts = 0; sigs = []
         if not np.isnan(r):
-            if   r <= 30:            pts += 28; sigs.append('RSI ' + str(round(r)) + ' GRN')
-            elif r <= RSI_SURVENTE:  pts += 18; sigs.append('RSI ' + str(round(r)))
-            elif r <= 50:            pts += 8
+            if   r <= 30:           pts += 28; sigs.append('RSI ' + str(round(r)) + ' GRN')
+            elif r <= RSI_SURVENTE: pts += 18; sigs.append('RSI ' + str(round(r)))
+            elif r <= 50:           pts += 8
         if not np.isnan(mh_v):
             if   mh_v > 0 and ml_v > ms_v: pts += 20; sigs.append('MACD GRN')
             elif mh_v > 0:                  pts += 12; sigs.append('MACD')
             elif mh_v > -0.1:               pts += 5
         if not np.isnan(cc):
-            if   cc < CCI_SURVENTE:  pts += 18; sigs.append('CCI ' + str(round(cc)) + ' GRN')
-            elif 50 <= cc <= 150:    pts += 12; sigs.append('CCI ' + str(round(cc)))
-            elif 0 < cc < 50:        pts += 6
+            if   cc < CCI_SURVENTE: pts += 18; sigs.append('CCI ' + str(round(cc)) + ' GRN')
+            elif 50 <= cc <= 150:   pts += 12; sigs.append('CCI ' + str(round(cc)))
+            elif 0 < cc < 50:       pts += 6
         if not np.isnan(st):
-            if   st <= 20:               pts += 14; sigs.append('Stoch ' + str(round(st)) + ' GRN')
-            elif st <= STOCH_SURVENTE:   pts += 9;  sigs.append('Stoch ' + str(round(st)))
+            if   st <= 20:                pts += 14; sigs.append('Stoch ' + str(round(st)) + ' GRN')
+            elif st <= STOCH_SURVENTE:    pts += 9;  sigs.append('Stoch ' + str(round(st)))
         above = sum(1 for v in mms.values() if px > v)
         if above == len(mms) > 0: pts += 15; sigs.append('MM OK')
         elif above >= 2:           pts += 8
@@ -285,7 +285,6 @@ for ticker in tickers:
         hist  = all_hist.get(ticker)
         px_h  = float(hist['Close'].iloc[-1]) if hist is not None and len(hist) > 0 else None
         prix  = info.get('currentPrice') or info.get('regularMarketPrice') or px_h
-
         per   = info.get('trailingPE') or info.get('forwardPE')
         pbv   = info.get('priceToBook')
         roe_r = info.get('returnOnEquity'); roe = round(roe_r * 100, 1) if roe_r else None
@@ -294,19 +293,15 @@ for ticker in tickers:
         peg   = info.get('pegRatio')
         eg_r  = info.get('earningsGrowth'); eg  = round(eg_r  * 100, 1) if eg_r  else None
         ev    = info.get('enterpriseToEbitda')
-
         sv = score_value(info)
         sg = score_growth(info)
         sd = score_div(info)
         st, td = score_tech(hist)
-
         total_f = POIDS_VALUE + POIDS_GROWTH + POIDS_DIVIDENDE
         sf = round(sv * POIDS_VALUE / total_f + sg * POIDS_GROWTH / total_f + sd * POIDS_DIVIDENDE / total_f)
         score = round(sf * (1 - POIDS_TECHNIQUE / 100) + st * (POIDS_TECHNIQUE / 100))
-
         if score < SCORE_MIN:
             continue
-
         row = {
             'ticker': ticker, 'nom': nom[:35], 'secteur': sect,
             'pays': pays, 'pea': 1 if ticker in PEA_SET else 0,
@@ -328,17 +323,26 @@ for ticker in tickers:
     except Exception:
         pass
 
+# Tri par score decroissant
 resultats.sort(key=lambda x: x['score'], reverse=True)
 resultats = resultats[:TOP_N]
 print('OK: ' + str(len(resultats)) + ' opportunites')
 
 # ══════════════════════════════════════════════════════════════
-# HTML — construit par concatenation, zero f-string JS
+# GENERATION HTML
 # ══════════════════════════════════════════════════════════════
-DATA   = json.dumps(resultats, ensure_ascii=False, default=str)
-DATE   = d_fin.strftime('%d/%m/%Y %H:%M')
-NSCAN  = str(len(tickers))
-SMIN   = str(SCORE_MIN)
+DATA  = json.dumps(resultats, ensure_ascii=False, default=str)
+DATE  = d_fin.strftime('%d/%m/%Y %H:%M')
+NSCAN = str(len(tickers))
+SMIN  = str(SCORE_MIN)
+CFG   = json.dumps({
+    'perMax': PER_MAX, 'pbvMax': PBV_MAX, 'roeMin': ROE_MIN,
+    'rsiSurvente': RSI_SURVENTE, 'cciSurvente': CCI_SURVENTE,
+    'stochSurvente': STOCH_SURVENTE, 'adxMin': ADX_MIN,
+    'poidsValue': POIDS_VALUE, 'poidsGrowth': POIDS_GROWTH,
+    'poidsDividende': POIDS_DIVIDENDE, 'poidsTechnique': POIDS_TECHNIQUE,
+    'scoreMin': SCORE_MIN,
+})
 
 page = []
 page.append('<!DOCTYPE html>')
@@ -352,7 +356,31 @@ page.append('body{background:#0a0e1a;color:#e2e8f0;font-family:system-ui,sans-se
 page.append('.hdr{background:#111827;border-bottom:1px solid #1e2d45;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:10}')
 page.append('.htitle{font-family:monospace;font-size:17px;font-weight:900;color:#00d4aa}')
 page.append('.hsub{font-size:10px;color:#64748b;margin-top:2px}')
+page.append('.hbtns{display:flex;gap:6px;align-items:center;flex-wrap:wrap}')
+page.append('.hbtn{font-size:11px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;white-space:nowrap}')
+page.append('.hbtn-scan{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000}')
+page.append('.hbtn-cfg{background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44}')
+page.append('.hbtn-imp{background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44}')
 page.append('.wrap{max-width:1500px;margin:0 auto;padding:12px}')
+# Modal shared styles
+page.append('.modal-bg{display:none;position:fixed;inset:0;background:#000000bb;z-index:50;align-items:center;justify-content:center}')
+page.append('.modal-bg.open{display:flex}')
+page.append('.modal{background:#111827;border:1px solid #1e2d45;border-radius:14px;padding:20px;width:90%;max-width:540px;max-height:90vh;overflow-y:auto}')
+page.append('.modal h3{font-family:monospace;font-size:14px;color:#00d4aa;margin-bottom:14px}')
+page.append('.modal-close{float:right;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;margin-top:-4px}')
+page.append('.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}')
+page.append('.cfg-item{background:#0d1520;border-radius:8px;padding:10px}')
+page.append('.cfg-item label{display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}')
+page.append('.cfg-item input{width:100%;background:#111827;border:1px solid #1e2d45;color:#00d4aa;font-size:13px;padding:6px 8px;border-radius:6px;outline:none;font-family:monospace;text-align:right}')
+page.append('.cfg-section{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px;border-top:1px solid #1e2d45;padding-top:10px}')
+page.append('.cfg-note{font-size:10px;color:#f59e0b;margin-bottom:10px}')
+page.append('.modal-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;font-weight:700;font-size:13px}')
+page.append('.modal-btn-ok{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000;margin-bottom:8px}')
+page.append('.modal-btn-cancel{background:#1e2d45;color:#64748b}')
+page.append('.imp-area{width:100%;min-height:100px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-family:monospace;font-size:12px;padding:10px;border-radius:8px;margin-bottom:10px;resize:vertical}')
+page.append('.imp-note{font-size:10px;color:#64748b;margin-bottom:12px;line-height:1.6}')
+page.append('.scan-status{background:#0d1520;border:1px solid #1e2d45;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:11px;color:#64748b;margin-bottom:10px;display:none}')
+# Main UI
 page.append('.mrow{display:flex;gap:6px;margin-bottom:10px}')
 page.append('.mbtn{flex:1;padding:10px 4px;border-radius:10px;border:2px solid #1e2d45;background:#0d1520;cursor:pointer;text-align:center;transition:.15s}')
 page.append('.mbtn.on{border-color:#00d4aa;background:#00d4aa18}')
@@ -384,6 +412,7 @@ page.append('tbody tr:nth-child(even) td{background:#0a1020}')
 page.append('tbody tr:hover td{background:#152030!important}')
 page.append('.tk{font-family:monospace;font-weight:700;color:#00d4aa;font-size:12px}')
 page.append('.ptag{font-size:8px;padding:1px 4px;border-radius:3px;background:#00d4aa18;color:#00d4aa;border:1px solid #00d4aa33;margin-left:3px}')
+page.append('.imptag{font-size:8px;padding:1px 4px;border-radius:3px;background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33;margin-left:3px}')
 page.append('.nm{font-size:10px;color:#64748b;max-width:130px;overflow:hidden;text-overflow:ellipsis}')
 page.append('.ct{font-size:9px;color:#2a4060}')
 page.append('.bw{display:flex;align-items:center;gap:4px}')
@@ -397,32 +426,93 @@ page.append('</head><body>')
 
 # Header
 page.append('<div class="hdr">')
-page.append('<div><div class="htitle">Stock Screener</div>')
+page.append('<div><div class="htitle">&#128225; Stock Screener</div>')
 page.append('<div class="hsub">' + NSCAN + ' actions - Yahoo Finance - ' + DATE + '</div></div>')
+page.append('<div class="hbtns">')
 page.append('<span style="font-family:monospace;font-size:10px;color:#64748b" id="nxt"></span>')
-page.append('</div>')
-page.append('<div class="wrap">')
+page.append('<button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>')
+page.append('<button class="hbtn hbtn-imp" onclick="openImp()">&#128229; Tickers</button>')
+page.append('<button class="hbtn hbtn-scan" onclick="triggerScan()">&#9889; Nouveau scan</button>')
+page.append('</div></div>')
 
-# Mode buttons
+# Modal Critères
+page.append('<div class="modal-bg" id="modal-cfg">')
+page.append('<div class="modal">')
+page.append('<button class="modal-close" onclick="closeCfg()">&#10005;</button>')
+page.append('<h3>&#9881; Criteres de scoring</h3>')
+page.append('<div class="cfg-note">Modifiez les seuils puis cliquez Appliquer. Le re-scoring est instantane sur les donnees en memoire. Pour un scan complet avec nouvelles donnees, utilisez Nouveau scan.</div>')
+page.append('<div class="cfg-section">Fondamentaux — Valorisation</div>')
+page.append('<div class="cfg-grid">')
+page.append('<div class="cfg-item"><label>PER max</label><input type="number" id="c-per" step="1"></div>')
+page.append('<div class="cfg-item"><label>P/Book max</label><input type="number" id="c-pbv" step="0.5"></div>')
+page.append('<div class="cfg-item"><label>EV/EBITDA max</label><input type="number" id="c-ev" step="1"></div>')
+page.append('<div class="cfg-item"><label>ROE min (%)</label><input type="number" id="c-roe" step="1"></div>')
+page.append('</div>')
+page.append('<div class="cfg-section">Technique — Surventes</div>')
+page.append('<div class="cfg-grid">')
+page.append('<div class="cfg-item"><label>RSI survente max</label><input type="number" id="c-rsi" step="1"></div>')
+page.append('<div class="cfg-item"><label>Stoch. survente max</label><input type="number" id="c-stoch" step="1"></div>')
+page.append('<div class="cfg-item"><label>CCI survente (negatif)</label><input type="number" id="c-cci" step="10"></div>')
+page.append('<div class="cfg-item"><label>ADX min (tendance)</label><input type="number" id="c-adx" step="1"></div>')
+page.append('</div>')
+page.append('<div class="cfg-section">Poids du score (total = 100)</div>')
+page.append('<div class="cfg-grid">')
+page.append('<div class="cfg-item"><label>Poids Value (%)</label><input type="number" id="c-pv" step="5"></div>')
+page.append('<div class="cfg-item"><label>Poids Growth (%)</label><input type="number" id="c-pg" step="5"></div>')
+page.append('<div class="cfg-item"><label>Poids Dividende (%)</label><input type="number" id="c-pd" step="5"></div>')
+page.append('<div class="cfg-item"><label>Poids Technique (%)</label><input type="number" id="c-pt" step="5"></div>')
+page.append('</div>')
+page.append('<div class="cfg-section">Affichage</div>')
+page.append('<div class="cfg-grid">')
+page.append('<div class="cfg-item"><label>Score minimum</label><input type="number" id="c-smin" step="5"></div>')
+page.append('</div>')
+page.append('<button class="modal-btn modal-btn-ok" onclick="applyCfg()">&#10003; Appliquer le re-scoring</button>')
+page.append('<button class="modal-btn modal-btn-cancel" onclick="closeCfg()">Annuler</button>')
+page.append('</div></div>')
+
+# Modal Import tickers
+page.append('<div class="modal-bg" id="modal-imp">')
+page.append('<div class="modal">')
+page.append('<button class="modal-close" onclick="closeImp()">&#10005;</button>')
+page.append('<h3>&#128229; Importer des tickers</h3>')
+page.append('<div class="imp-note">')
+page.append('Collez vos tickers (un par ligne ou separes par virgule/espace).<br>')
+page.append('Exemples: AAPL, MSFT, MC.PA, AIR.PA<br>')
+page.append('Ces tickers remplacent temporairement la liste affichee. Au prochain scan automatique, la liste d\'origine reprend.')
+page.append('</div>')
+page.append('<textarea class="imp-area" id="imp-text" placeholder="AAPL&#10;MSFT&#10;MC.PA&#10;AIR.PA&#10;..."></textarea>')
+page.append('<div class="scan-status" id="imp-status">Scan en cours...</div>')
+page.append('<button class="modal-btn modal-btn-ok" onclick="importTickers()">&#9889; Scanner ces tickers</button>')
+page.append('<button class="modal-btn modal-btn-cancel" onclick="closeImp()" style="margin-top:8px">Annuler</button>')
+page.append('</div></div>')
+
+# Scan status modal
+page.append('<div class="modal-bg" id="modal-scan">')
+page.append('<div class="modal" style="text-align:center">')
+page.append('<h3>&#9889; Nouveau scan lance</h3>')
+page.append('<p style="color:#64748b;font-size:12px;margin:12px 0 16px;line-height:1.7">Le scan complet Yahoo Finance est en cours sur GitHub Actions.<br>Duree estimee: 5-8 minutes.<br>La page se rechargera automatiquement dans 8 minutes.</p>')
+page.append('<div style="font-family:monospace;font-size:11px;color:#64748b;background:#0d1520;padding:10px;border-radius:8px;margin-bottom:14px" id="scan-countdown"></div>')
+page.append('<button class="modal-btn modal-btn-cancel" onclick="document.getElementById(\'modal-scan\').className=\'modal-bg\'">Fermer</button>')
+page.append('</div></div>')
+
+# Main app
+page.append('<div class="wrap">')
 page.append('<div class="mrow">')
 page.append('<div class="mbtn on" id="m-combine" onclick="setMode(\'combine\')"><div class="mico">&#127919;</div><div class="mlbl">Fond+Tech</div></div>')
 page.append('<div class="mbtn" id="m-fond" onclick="setMode(\'fond\')"><div class="mico">&#128202;</div><div class="mlbl">Fondamental</div></div>')
 page.append('<div class="mbtn" id="m-tech" onclick="setMode(\'tech\')"><div class="mico">&#128200;</div><div class="mlbl">Technique</div></div>')
 page.append('</div>')
-page.append('<div class="mdesc" id="mdesc">Mode Combine: score = fondamentaux + technique.</div>')
-
-# Filters
+page.append('<div class="mdesc" id="mdesc">Mode Combine: score fondamentaux + technique.</div>')
 page.append('<div class="filters">')
 page.append('<div class="fg"><label>Recherche</label><input type="text" id="q" oninput="render()" placeholder="Ticker..." style="width:120px"></div>')
 page.append('<div class="fg"><label>Marche</label><select id="mkt" onchange="render()"><option value="all">Europe+USA</option><option value="eu">Europe</option><option value="us">USA</option></select></div>')
 page.append('<div class="fg"><label>Secteur</label><select id="sect" onchange="render()"></select></div>')
 page.append('<div class="fg"><label>Score min</label><input type="number" id="ms" value="' + SMIN + '" min="0" max="100" step="5" onchange="render()" style="width:60px"></div>')
 page.append('</div>')
-
-# Tabs
 page.append('<div class="tabs">')
 page.append('<div class="tab on" id="tab-all" onclick="setTab(\'all\')">Toutes <span class="bdg" id="b-all">0</span></div>')
 page.append('<div class="tab" id="tab-pea" onclick="setTab(\'pea\')">PEA <span class="bdg" id="b-pea">0</span></div>')
+page.append('<div class="tab" id="tab-imp" onclick="setTab(\'imp\')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>')
 page.append('</div>')
 page.append('<div class="stats" id="stats"></div>')
 page.append('<div class="tw"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>')
@@ -431,35 +521,52 @@ page.append('</div></div>')
 page.append('<div class="disc">Donnees a titre indicatif. Ne constitue pas un conseil en investissement.</div>')
 page.append('</div>')
 
-# Data injection
+# Data + config injection
 page.append('<script>')
-page.append('var RAW = ' + DATA + ';')
-page.append('var mode = "combine", curTab = "all", sortCol = "score", sortDir = -1;')
+page.append('var RAW_ORIG = ' + DATA + ';')
+page.append('var RAW = RAW_ORIG.slice();')
+page.append('var CFG = ' + CFG + ';')
+page.append('var IMP_DATA = null;')
+# Github info — à remplacer par l'utilisateur
+page.append('var GH_OWNER = "VOTRE_USERNAME";')
+page.append('var GH_REPO  = "screener";')
+page.append('var GH_TOKEN = "VOTRE_GH_TOKEN";')
 
-# JS — chaîne Python normale, accolades simples OK
 js = r"""
-var sects = ['all'];
-RAW.forEach(function(r) { if(r.secteur && sects.indexOf(r.secteur) === -1) sects.push(r.secteur); });
-sects.sort();
-var se = document.getElementById('sect');
-sects.forEach(function(s) { var o = document.createElement('option'); o.value = s; o.text = s === 'all' ? 'Tous' : s; se.appendChild(o); });
+var mode = "combine", curTab = "all", sortCol = "score", sortDir = -1;
 
+// Secteurs
+function buildSects() {
+  var sects = ['all'];
+  for(var i = 0; i < RAW_ORIG.length; i++) {
+    if(RAW_ORIG[i].secteur && sects.indexOf(RAW_ORIG[i].secteur) === -1) sects.push(RAW_ORIG[i].secteur);
+  }
+  sects.sort();
+  var se = document.getElementById('sect');
+  se.innerHTML = '';
+  for(var i = 0; i < sects.length; i++) {
+    var o = document.createElement('option'); o.value = sects[i]; o.text = sects[i] === 'all' ? 'Tous' : sects[i]; se.appendChild(o);
+  }
+}
+buildSects();
+
+// Countdown prochain scan
 function nextUpdate() {
   var now = new Date(); var nxt = new Date();
   nxt.setDate(now.getDate() + (now.getHours() >= 7 ? 1 : 0));
   nxt.setHours(7, 0, 0, 0);
   var diff = nxt - now; var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000);
   var el = document.getElementById('nxt');
-  if(el) el.textContent = 'Prochain scan: ' + h + 'h' + m + 'm';
+  if(el) el.textContent = 'Scan auto: ' + h + 'h' + m + 'm';
 }
 nextUpdate(); setInterval(nextUpdate, 60000);
 
+// ── MODE ────────────────────────────────────────────────────
 var DESCS = {
-  'combine': 'Mode Combine: score = fondamentaux + technique. Detecte les actions sous-valorisees avec signal d\'entree favorable.',
+  'combine': 'Mode Combine: score = fondamentaux + technique. Detecte actions sous-valorisees avec signal d\'entree favorable.',
   'fond':    'Mode Fondamental: PER, ROE, dividende, croissance. Ideal moyen/long terme.',
   'tech':    'Mode Technique: RSI, MACD, CCI, Stochastique, Moyennes mobiles. Ideal court/moyen terme.'
 };
-
 function setMode(m) {
   mode = m;
   ['combine','fond','tech'].forEach(function(x) {
@@ -469,28 +576,81 @@ function setMode(m) {
   render();
 }
 
+// ── TAB ─────────────────────────────────────────────────────
 function setTab(t) {
   curTab = t;
-  ['all','pea'].forEach(function(x) {
-    document.getElementById('tab-' + x).className = 'tab' + (x === t ? ' on' : '');
+  ['all','pea','imp'].forEach(function(x) {
+    var el = document.getElementById('tab-' + x);
+    if(el) el.className = 'tab' + (x === t ? ' on' : '');
   });
   render();
 }
 
-function getScore(r) {
-  if(mode === 'fond') return Math.round(r.sv * 0.4 + r.sg * 0.35 + r.sd * 0.25);
-  if(mode === 'tech') return r.st || 0;
-  return r.score || 0;
+// ── SCORE LOCAL (re-calcul avec CFG modifie) ────────────────
+function localScoreValue(r) {
+  var p = 0;
+  if(r.per) p += r.per <= 10 ? 40 : r.per <= 15 ? 28 : r.per <= CFG.perMax ? 15 : 0;
+  if(r.pbv) p += r.pbv <= 1 ? 30 : r.pbv <= 2 ? 20 : r.pbv <= CFG.pbvMax ? 10 : 0;
+  if(r.ev)  p += r.ev  <= 8 ? 30 : r.ev  <= 12 ? 20 : r.ev  <= 15 ? 10 : 0;
+  return Math.min(100, p);
+}
+function localScoreGrowth(r) {
+  var p = 0;
+  if(r.roe) p += r.roe >= 25 ? 35 : r.roe >= 15 ? 25 : r.roe >= CFG.roeMin ? 12 : 0;
+  if(r.bpa) p += r.bpa >= 25 ? 40 : r.bpa >= 15 ? 28 : r.bpa > 0 ? 15 : 0;
+  if(r.peg) p += r.peg <= 1 ? 25 : r.peg <= 1.5 ? 15 : r.peg <= 2.5 ? 8 : 0;
+  return Math.min(100, p);
+}
+function localScoreDiv(r) {
+  var p = 0;
+  if(r.div) p += r.div >= 6 ? 60 : r.div >= 4 ? 45 : r.div >= 3 ? 30 : r.div > 0 ? 15 : 0;
+  return Math.min(100, p);
+}
+function localScoreTech(r) {
+  var p = 0;
+  if(r.rsi !== null && r.rsi !== undefined) {
+    if(r.rsi <= 30) p += 28; else if(r.rsi <= CFG.rsiSurvente) p += 18; else if(r.rsi <= 50) p += 8;
+  }
+  if(r.macd !== null && r.macd !== undefined) {
+    if(r.macd > 0) p += 15; else if(r.macd > -0.1) p += 5;
+  }
+  if(r.cci !== null && r.cci !== undefined) {
+    if(r.cci < CFG.cciSurvente) p += 18; else if(r.cci >= 50 && r.cci <= 150) p += 12; else if(r.cci > 0) p += 6;
+  }
+  if(r.stoch !== null && r.stoch !== undefined) {
+    if(r.stoch <= 20) p += 14; else if(r.stoch <= CFG.stochSurvente) p += 9;
+  }
+  if(r.mm20 !== null && r.mm50 !== null && r.mm200 !== null && r.mm20 > 0 && r.mm50 > 0 && r.mm200 > 0) p += 15;
+  if(r.adx !== null && r.adx >= CFG.adxMin) p += 5;
+  return Math.min(100, p);
+}
+function localScore(r) {
+  var sv = localScoreValue(r);
+  var sg = localScoreGrowth(r);
+  var sd = localScoreDiv(r);
+  var st = localScoreTech(r);
+  var tf = CFG.poidsValue + CFG.poidsGrowth + CFG.poidsDividende;
+  var sf = Math.round(sv * CFG.poidsValue / tf + sg * CFG.poidsGrowth / tf + sd * CFG.poidsDividende / tf);
+  return Math.round(sf * (1 - CFG.poidsTechnique / 100) + st * (CFG.poidsTechnique / 100));
 }
 
+function getScore(r) {
+  var sc = localScore(r);
+  if(mode === 'fond') return Math.round(localScoreValue(r) * 0.4 + localScoreGrowth(r) * 0.35 + localScoreDiv(r) * 0.25);
+  if(mode === 'tech') return localScoreTech(r);
+  return sc;
+}
+
+// ── FILTRE ──────────────────────────────────────────────────
 function doFilter() {
   var q   = (document.getElementById('q').value || '').toLowerCase();
   var mkt = document.getElementById('mkt').value;
   var sec = document.getElementById('sect').value;
   var ms  = parseFloat(document.getElementById('ms').value) || 0;
+  var src = (curTab === 'imp' && IMP_DATA) ? IMP_DATA : RAW;
   var out = [];
-  for(var i = 0; i < RAW.length; i++) {
-    var r = RAW[i];
+  for(var i = 0; i < src.length; i++) {
+    var r = src[i];
     if(getScore(r) < ms) continue;
     if(mkt === 'eu' && r.pays === 'US') continue;
     if(mkt === 'us' && r.pays !== 'US') continue;
@@ -498,37 +658,52 @@ function doFilter() {
     if(q && r.ticker.toLowerCase().indexOf(q) === -1 && r.nom.toLowerCase().indexOf(q) === -1) continue;
     out.push(r);
   }
-  out.sort(function(a, b) { return sortDir * (getScore(b) - getScore(a)); });
+  // Tri par score decroissant par defaut
+  if(sortCol === 'score') {
+    out.sort(function(a, b) { return sortDir * (getScore(b) - getScore(a)); });
+  } else {
+    out.sort(function(a, b) {
+      var av = a[sortCol], bv = b[sortCol];
+      if(av === null || av === undefined) return 1;
+      if(bv === null || bv === undefined) return -1;
+      var na = parseFloat(av), nb = parseFloat(bv);
+      if(!isNaN(na) && !isNaN(nb)) return sortDir * (na - nb);
+      return sortDir * String(av).localeCompare(String(bv));
+    });
+  }
   return out;
 }
 
+// ── RENDU ───────────────────────────────────────────────────
 function barHtml(v) {
   var pct = Math.min(v || 0, 100);
   var c = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#64748b';
-  return '<div class="bw"><div class="br"><div class="bf" style="width:' + pct + '%;background:' + c + '"></div></div><span style="font-family:monospace;font-size:11px;color:' + c + ';font-weight:700">' + Math.round(pct) + '</span></div>';
+  return '<div class="bw"><div class="br"><div class="bf" style="width:' + pct + '%;background:' + c + '"></div></div>'
+       + '<span style="font-family:monospace;font-size:11px;color:' + c + ';font-weight:700">' + Math.round(pct) + '</span></div>';
 }
-
 function mmColor(v) {
   if(v === null || v === undefined) return '<span style="color:#2a3a52">-</span>';
   var c = v >= 0 ? '#10b981' : '#ef4444';
   return '<span style="font-family:monospace;font-size:11px;color:' + c + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + '%</span>';
 }
-
 function cellHtml(col, r) {
   var v = r[col];
   if(col === 'ticker') {
-    return '<div><span class="tk">' + r.ticker + '</span>' + (r.pea ? '<span class="ptag">PEA</span>' : '') + '</div>'
+    var tags = '';
+    if(r.pea) tags += '<span class="ptag">PEA</span>';
+    if(r._imported) tags += '<span class="imptag">IMPORT</span>';
+    return '<div><span class="tk">' + r.ticker + '</span>' + tags + '</div>'
          + '<div class="nm">' + r.nom + '</div>'
          + '<div class="ct">' + r.pays + ' - ' + r.secteur + '</div>';
   }
-  if(col === 'prix') return v !== null ? '<span style="font-family:monospace">' + (r.devise === 'USD' ? '$' : '') + parseFloat(v).toFixed(2) + '</span>' : '-';
-  if(col === 'per')  return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v <= 12 ? '#10b981' : v <= 25 ? '#f59e0b' : '#ef4444') + '">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
-  if(col === 'pbv')  return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
-  if(col === 'roe')  return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v >= 20 ? '#10b981' : v >= 10 ? '#f59e0b' : '#94a3b8') + '">' + v + '%</span>' : '-';
-  if(col === 'marge')return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + v + '%</span>' : '-';
-  if(col === 'div')  return v ? '<span style="font-family:monospace;color:' + (v >= 4 ? '#10b981' : '#94a3b8') + '">' + parseFloat(v).toFixed(1) + '%</span>' : '-';
-  if(col === 'bpa')  return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v >= 0 ? '#10b981' : '#ef4444') + '">' + v + '%</span>' : '-';
-  if(col === 'ev')   return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
+  if(col === 'prix')  return v !== null ? '<span style="font-family:monospace">' + (r.devise === 'USD' ? '$' : '') + parseFloat(v).toFixed(2) + '</span>' : '-';
+  if(col === 'per')   return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v <= 12 ? '#10b981' : v <= 25 ? '#f59e0b' : '#ef4444') + '">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
+  if(col === 'pbv')   return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
+  if(col === 'roe')   return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v >= 20 ? '#10b981' : v >= 10 ? '#f59e0b' : '#94a3b8') + '">' + v + '%</span>' : '-';
+  if(col === 'marge') return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + v + '%</span>' : '-';
+  if(col === 'div')   return v ? '<span style="font-family:monospace;color:' + (v >= 4 ? '#10b981' : '#94a3b8') + '">' + parseFloat(v).toFixed(1) + '%</span>' : '-';
+  if(col === 'bpa')   return v ? '<span style="font-family:monospace;font-size:11px;color:' + (v >= 0 ? '#10b981' : '#ef4444') + '">' + v + '%</span>' : '-';
+  if(col === 'ev')    return v ? '<span style="font-family:monospace;font-size:11px;color:#94a3b8">' + parseFloat(v).toFixed(1) + 'x</span>' : '-';
   if(col === 'sv' || col === 'sg' || col === 'sd' || col === 'st') return v !== null ? barHtml(v) : '-';
   if(col === 'score') return barHtml(getScore(r));
   if(col === 'rsi')   return v !== null ? '<span style="font-family:monospace;font-size:11px;font-weight:' + (v <= 45 || v >= 70 ? 700 : 400) + ';color:' + (v <= 30 ? '#10b981' : v <= 45 ? '#f59e0b' : v >= 70 ? '#ef4444' : '#94a3b8') + '">' + v + '</span>' : '-';
@@ -539,12 +714,8 @@ function cellHtml(col, r) {
   if(col === 'mm20' || col === 'mm50' || col === 'mm200') return mmColor(v);
   if(col === 'signaux') {
     if(!v) return '-';
-    var parts = v.split('|');
-    var html = '';
-    for(var i = 0; i < parts.length; i++) {
-      var s = parts[i].trim();
-      if(s) html += '<span class="chip">' + s + '</span>';
-    }
+    var parts = v.split('|'); var html = '';
+    for(var i = 0; i < parts.length; i++) { var s = parts[i].trim(); if(s) html += '<span class="chip">' + s + '</span>'; }
     return html || '-';
   }
   return v !== null && v !== undefined ? String(v) : '-';
@@ -566,53 +737,136 @@ function doSort(col) {
 function render() {
   var data = doFilter();
   var allN = data.length;
-  var peaD = data.filter(function(r) { return r.pea === 1; });
+  var peaD = []; for(var i = 0; i < data.length; i++) { if(data[i].pea === 1) peaD.push(data[i]); }
+  var impD = IMP_DATA ? IMP_DATA : [];
   document.getElementById('b-all').textContent = allN;
   document.getElementById('b-pea').textContent = peaD.length;
-  var shown = curTab === 'pea' ? peaD : data;
+  var impTab = document.getElementById('b-imp');
+  if(impTab) impTab.textContent = impD.length;
+  var shown = data;
 
-  var s70 = 0, s50 = 0, sumD = 0, cntD = 0, rsiLow = 0;
+  var s70=0, s50=0, sumD=0, cntD=0, rsiLow=0;
   for(var i = 0; i < shown.length; i++) {
     var sc = getScore(shown[i]);
-    if(sc >= 70) s70++;
-    else if(sc >= 50) s50++;
+    if(sc >= 70) s70++; else if(sc >= 50) s50++;
     if(shown[i].div) { sumD += shown[i].div; cntD++; }
     if(shown[i].rsi && shown[i].rsi <= 45) rsiLow++;
   }
   var avgD = cntD ? (sumD / cntD).toFixed(1) + '%' : '-';
-  var statsData = [['Total', shown.length, '#00d4aa'], ['Score 70+', s70, '#10b981'], ['Score 50-69', s50, '#f59e0b'], ['Div moy', avgD, '#8b5cf6'], ['RSI<=45', rsiLow, '#3b82f6']];
-  var statsHtml = '';
-  for(var i = 0; i < statsData.length; i++) {
-    statsHtml += '<div class="stat"><div class="sl">' + statsData[i][0] + '</div><div class="sv" style="color:' + statsData[i][2] + '">' + statsData[i][1] + '</div></div>';
-  }
-  document.getElementById('stats').innerHTML = statsHtml;
+  var sd = [['Total',shown.length,'#00d4aa'],['Score 70+',s70,'#10b981'],['Score 50-69',s50,'#f59e0b'],['Div moy',avgD,'#8b5cf6'],['RSI<=45',rsiLow,'#3b82f6']];
+  var sh = '';
+  for(var i = 0; i < sd.length; i++) sh += '<div class="stat"><div class="sl">' + sd[i][0] + '</div><div class="sv" style="color:' + sd[i][2] + '">' + sd[i][1] + '</div></div>';
+  document.getElementById('stats').innerHTML = sh;
 
   var cols = mode === 'fond' ? CF : mode === 'tech' ? CT : CC;
-  var thHtml = '<tr>';
+  var thH = '<tr>';
   for(var i = 0; i < cols.length; i++) {
     var c = cols[i];
-    thHtml += '<th class="' + (sortCol === c ? 'sorted' : '') + '" onclick="doSort(\'' + c + '\')">' + (CL[c] || c) + (sortCol === c ? (sortDir > 0 ? ' ^' : ' v') : '') + '</th>';
+    thH += '<th class="' + (sortCol === c ? 'sorted' : '') + '" onclick="doSort(\'' + c + '\')">' + (CL[c] || c) + (sortCol === c ? (sortDir > 0 ? ' ^' : ' v') : '') + '</th>';
   }
-  thHtml += '</tr>';
-  document.getElementById('thead').innerHTML = thHtml;
+  thH += '</tr>';
+  document.getElementById('thead').innerHTML = thH;
 
   var empty = document.getElementById('empty');
-  if(!shown.length) {
-    document.getElementById('tbody').innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
+  if(!shown.length) { document.getElementById('tbody').innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   var rows = '';
   for(var i = 0; i < shown.length; i++) {
-    var r = shown[i];
     rows += '<tr>';
-    for(var j = 0; j < cols.length; j++) {
-      rows += '<td>' + cellHtml(cols[j], r) + '</td>';
-    }
+    for(var j = 0; j < cols.length; j++) rows += '<td>' + cellHtml(cols[j], shown[i]) + '</td>';
     rows += '</tr>';
   }
   document.getElementById('tbody').innerHTML = rows;
+}
+
+// ── MODAL CRITERES ──────────────────────────────────────────
+function openCfg() {
+  document.getElementById('c-per').value   = CFG.perMax;
+  document.getElementById('c-pbv').value   = CFG.pbvMax;
+  document.getElementById('c-ev').value    = 15;
+  document.getElementById('c-roe').value   = CFG.roeMin;
+  document.getElementById('c-rsi').value   = CFG.rsiSurvente;
+  document.getElementById('c-stoch').value = CFG.stochSurvente;
+  document.getElementById('c-cci').value   = CFG.cciSurvente;
+  document.getElementById('c-adx').value   = CFG.adxMin;
+  document.getElementById('c-pv').value    = CFG.poidsValue;
+  document.getElementById('c-pg').value    = CFG.poidsGrowth;
+  document.getElementById('c-pd').value    = CFG.poidsDividende;
+  document.getElementById('c-pt').value    = CFG.poidsTechnique;
+  document.getElementById('c-smin').value  = CFG.scoreMin;
+  document.getElementById('modal-cfg').className = 'modal-bg open';
+}
+function closeCfg() { document.getElementById('modal-cfg').className = 'modal-bg'; }
+function applyCfg() {
+  var pv = parseFloat(document.getElementById('c-pv').value) || 0;
+  var pg = parseFloat(document.getElementById('c-pg').value) || 0;
+  var pd = parseFloat(document.getElementById('c-pd').value) || 0;
+  var pt = parseFloat(document.getElementById('c-pt').value) || 0;
+  if(pv + pg + pd + pt !== 100) { alert('Les 4 poids doivent totaliser 100. Total actuel: ' + (pv+pg+pd+pt)); return; }
+  CFG.perMax         = parseFloat(document.getElementById('c-per').value)   || CFG.perMax;
+  CFG.pbvMax         = parseFloat(document.getElementById('c-pbv').value)   || CFG.pbvMax;
+  CFG.roeMin         = parseFloat(document.getElementById('c-roe').value)   || CFG.roeMin;
+  CFG.rsiSurvente    = parseFloat(document.getElementById('c-rsi').value)   || CFG.rsiSurvente;
+  CFG.stochSurvente  = parseFloat(document.getElementById('c-stoch').value) || CFG.stochSurvente;
+  CFG.cciSurvente    = parseFloat(document.getElementById('c-cci').value)   || CFG.cciSurvente;
+  CFG.adxMin         = parseFloat(document.getElementById('c-adx').value)   || CFG.adxMin;
+  CFG.poidsValue     = pv; CFG.poidsGrowth = pg; CFG.poidsDividende = pd; CFG.poidsTechnique = pt;
+  CFG.scoreMin       = parseFloat(document.getElementById('c-smin').value)  || CFG.scoreMin;
+  document.getElementById('ms').value = CFG.scoreMin;
+  closeCfg();
+  render();
+}
+
+// ── IMPORT TICKERS ──────────────────────────────────────────
+function openImp() { document.getElementById('modal-imp').className = 'modal-bg open'; }
+function closeImp() { document.getElementById('modal-imp').className = 'modal-bg'; }
+function importTickers() {
+  var txt = document.getElementById('imp-text').value;
+  var tickers = txt.split(/[\n,;\s]+/).map(function(t) { return t.trim().toUpperCase(); }).filter(function(t) { return t.length > 0; });
+  if(!tickers.length) { alert('Aucun ticker valide'); return; }
+  // Chercher dans RAW_ORIG d'abord
+  var found = []; var notFound = [];
+  for(var i = 0; i < tickers.length; i++) {
+    var tk = tickers[i]; var hit = null;
+    for(var j = 0; j < RAW_ORIG.length; j++) {
+      if(RAW_ORIG[j].ticker.toUpperCase() === tk) { hit = RAW_ORIG[j]; break; }
+    }
+    if(hit) { var r = JSON.parse(JSON.stringify(hit)); r._imported = true; found.push(r); }
+    else notFound.push(tk);
+  }
+  IMP_DATA = found;
+  document.getElementById('tab-imp').style.display = '';
+  document.getElementById('b-imp').textContent = found.length;
+  closeImp();
+  setTab('imp');
+  if(notFound.length) {
+    alert(found.length + ' ticker(s) charges depuis les donnees actuelles.\n' + notFound.length + ' non trouves (hors de la liste du dernier scan): ' + notFound.join(', ') + '\n\nPour scanner des tickers absents, utilisez le bouton Nouveau scan apres avoir mis a jour la liste dans generate.py.');
+  }
+}
+
+// ── NOUVEAU SCAN (GitHub Actions API) ───────────────────────
+function triggerScan() {
+  if(!GH_TOKEN || GH_TOKEN === 'VOTRE_GH_TOKEN') {
+    alert('Token GitHub non configure.\n\nOuvrez generate.py et remplacez VOTRE_GH_TOKEN par votre token Personnel GitHub (Settings > Developer settings > Personal access tokens > scope: workflow).\n\nRelancez ensuite un scan depuis Actions pour regénérer la page.');
+    return;
+  }
+  var url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/actions/workflows/scan.yml/dispatches';
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': 'token ' + GH_TOKEN, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: 'main' })
+  }).then(function(r) {
+    if(r.status === 204 || r.ok) {
+      document.getElementById('modal-scan').className = 'modal-bg open';
+      var secs = 480; var el = document.getElementById('scan-countdown');
+      var iv = setInterval(function() {
+        secs--;
+        var m = Math.floor(secs / 60); var s = secs % 60;
+        if(el) el.textContent = 'Rechargement dans ' + m + 'min ' + (s < 10 ? '0' : '') + s + 's';
+        if(secs <= 0) { clearInterval(iv); location.reload(); }
+      }, 1000);
+    } else { r.text().then(function(t) { alert('Erreur GitHub: ' + r.status + '\n' + t); }); }
+  }).catch(function(e) { alert('Erreur reseau: ' + e.message); });
 }
 
 render();
