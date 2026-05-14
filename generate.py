@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import json
 import csv
+import time
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -18,7 +19,7 @@ warnings.filterwarnings('ignore')
 # ══════════════════════════════════════════════════════════════
 # CONFIGURATION
 # ══════════════════════════════════════════════════════════════
-SCORE_MIN        = 50
+SCORE_MIN        = 35
 TOP_N            = 300
 JOURS_HISTORIQUE = 260
 POIDS_VALUE      = 30
@@ -217,16 +218,34 @@ for i in range(0, len(tickers), BATCH):
     print('  Prix: ' + str(min(i+BATCH, len(tickers))) + '/' + str(len(tickers)))
 
 resultats = []
-for ticker in tickers:
+for idx, ticker in enumerate(tickers):
     try:
-        info  = yf.Ticker(ticker).info or {}
+        hist  = all_hist.get(ticker)
+        # Pause anti rate-limit toutes les 50 actions
+        if idx > 0 and idx % 50 == 0:
+            time.sleep(2)
+        # Utiliser fast_info d'abord (plus léger, moins de rate limit)
+        tk_obj = yf.Ticker(ticker)
+        try:
+            fi = tk_obj.fast_info
+            px_fast = getattr(fi, 'lastPrice', None) or getattr(fi, 'last_price', None)
+            dev_fast = getattr(fi, 'currency', None)
+        except Exception:
+            fi = None; px_fast = None; dev_fast = None
+        # Info complète avec retry
+        info = {}
+        for attempt in range(2):
+            try:
+                info = tk_obj.info or {}
+                if info: break
+            except Exception:
+                if attempt == 0: time.sleep(3)
         nom   = info.get('longName') or info.get('shortName') or ticker
         sect  = info.get('sector') or 'N/A'
         pays  = (info.get('country') or '')[:2].upper() or '?'
-        dev   = info.get('currency') or ('EUR' if any(x in ticker for x in ['.PA','.DE','.AS','.BR','.MC','.MI','.SW','.CO','.ST','.OL','.HE','.LS','.L']) else 'USD')
-        hist  = all_hist.get(ticker)
+        dev   = dev_fast or info.get('currency') or ('EUR' if any(x in ticker for x in ['.PA','.DE','.AS','.BR','.MC','.MI','.SW','.CO','.ST','.OL','.HE','.LS','.L']) else 'USD')
         px_h  = float(hist['Close'].iloc[-1]) if hist is not None and len(hist) > 0 else None
-        prix  = info.get('currentPrice') or info.get('regularMarketPrice') or px_h
+        prix  = px_fast or info.get('currentPrice') or info.get('regularMarketPrice') or px_h
         per   = info.get('trailingPE') or info.get('forwardPE')
         pbv   = info.get('priceToBook')
         roe_r = info.get('returnOnEquity'); roe = round(roe_r * 100, 1) if roe_r else None
