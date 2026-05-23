@@ -259,6 +259,7 @@ d_deb = d_fin - timedelta(days=JOURS_HISTORIQUE)
 print('Scan de ' + str(len(tickers)) + ' actions...')
 
 BATCH = 50; all_hist = {}
+scan_errors = []
 for i in range(0, len(tickers), BATCH):
     batch = tickers[i:i+BATCH]
     try:
@@ -290,12 +291,16 @@ for idx, ticker in enumerate(tickers):
         except Exception:
             fi = None; px_fast = None; dev_fast = None
         info = {}
+        info_error = None
         for attempt in range(2):
             try:
                 info = tk_obj.info or {}
                 if info: break
-            except Exception:
+            except Exception as e:
+                info_error = str(e)
                 if attempt == 0: time.sleep(3)
+        if not info:
+            scan_errors.append({'ticker': ticker, 'raison': 'info vide', 'detail': info_error or 'N/A'})
         nom   = info.get('longName') or info.get('shortName') or ticker
         sect  = info.get('sector') or 'N/A'
         pays  = (info.get('country') or '')[:2].upper() or '?'
@@ -310,15 +315,12 @@ for idx, ticker in enumerate(tickers):
         peg   = info.get('pegRatio')
         eg_r  = info.get('earningsGrowth'); eg  = round(eg_r  * 100, 1) if eg_r  else None
         ev    = info.get('enterpriseToEbitda')
-        # Nouveaux champs fondamentaux
         ps_r  = info.get('priceToSalesTrailing12Months'); ps = round(float(ps_r), 2) if ps_r else None
         cr_r  = info.get('currentRatio');  cr  = round(float(cr_r), 2)  if cr_r else None
         de_r  = info.get('debtToEquity');  de  = round(float(de_r), 1)  if de_r else None
         fcf_r = info.get('freeCashflow');  mcap_r = info.get('marketCap')
         fcfy  = round(fcf_r / mcap_r * 100, 1) if (fcf_r and mcap_r and mcap_r > 0) else None
-        # P/FCF
         pfcf_v = round(mcap_r / fcf_r, 1) if (fcf_r and mcap_r and fcf_r > 0) else None
-        # Graham
         bpa_v  = info.get('trailingEps'); bvps_v = info.get('bookValue')
         px_cur_v = info.get('currentPrice') or info.get('regularMarketPrice') or px_h
         graham_v = None
@@ -330,11 +332,45 @@ for idx, ticker in enumerate(tickers):
         sg = score_growth(info)
         sd = score_div(info)
         st, td = score_tech(hist)
+
+        # Score momentum global: RoC + Williams %R + MACD histo
+        roc_v2  = td.get('roc')
+        willr_v2 = td.get('willr')
+        macd_v2  = td.get('macd')
+        smom = 0
+        if roc_v2 is not None:  smom += 40 if roc_v2 > 10 else 25 if roc_v2 > 5 else 10 if roc_v2 > 0 else 0
+        if willr_v2 is not None: smom += 35 if willr_v2 <= -80 else 20 if willr_v2 <= -60 else 8 if willr_v2 <= -40 else 0
+        if macd_v2 is not None:  smom += 25 if macd_v2 > 0 else 10 if macd_v2 > -0.1 else 0
+        smom = min(100, smom)
+
+        # Alerte divergence: fond fort + tech faible OU fond faible + tech fort
+        fond_score = round(sv * POIDS_VALUE / (POIDS_VALUE+POIDS_GROWTH+POIDS_DIVIDENDE)
+                         + sg * POIDS_GROWTH / (POIDS_VALUE+POIDS_GROWTH+POIDS_DIVIDENDE)
+                         + sd * POIDS_DIVIDENDE / (POIDS_VALUE+POIDS_GROWTH+POIDS_DIVIDENDE))
+        divergence = None
+        if fond_score >= 65 and st <= 35:
+            divergence = 'FOND+'
+        elif fond_score <= 35 and st >= 65:
+            divergence = 'TECH+'
+
         total_f = POIDS_VALUE + POIDS_GROWTH + POIDS_DIVIDENDE
         sf = round(sv * POIDS_VALUE / total_f + sg * POIDS_GROWTH / total_f + sd * POIDS_DIVIDENDE / total_f)
         score = round(sf * (1 - POIDS_TECHNIQUE / 100) + st * (POIDS_TECHNIQUE / 100))
         if score < SCORE_MIN:
             continue
+
+        # Sparkline: 60 derniers jours normalisés 0-100
+        sparkline = []
+        if hist is not None and len(hist) >= 10:
+            try:
+                closes = hist['Close'].dropna().tail(60).tolist()
+                mn, mx = min(closes), max(closes)
+                rng = mx - mn
+                if rng > 0:
+                    sparkline = [round((v - mn) / rng * 100, 1) for v in closes]
+            except Exception:
+                sparkline = []
+
         row = {
             'ticker': ticker, 'nom': nom[:35], 'secteur': sect,
             'pays': pays, 'pea': 1 if ticker in PEA_SET else 0,
@@ -345,23 +381,28 @@ for idx, ticker in enumerate(tickers):
             'roe': roe, 'marge': mg, 'div': yld, 'bpa': eg,
             'ev':    round(float(ev), 1) if ev else None,
             'peg':   round(float(peg), 2) if peg and peg > 0 else None,
-            # Nouveaux fondamentaux
             'ps': ps, 'cr': cr, 'de': de, 'fcfy': fcfy, 'pfcf': pfcf_v, 'graham': graham_v,
-            'sv': sv, 'sg': sg, 'sd': sd, 'st': st, 'score': score,
+            'sv': sv, 'sg': sg, 'sd': sd, 'st': st, 'smom': smom,
+            'score': score, 'divergence': divergence,
             'rsi':   td.get('rsi'),   'macd':  td.get('macd'),
             'cci':   td.get('cci'),   'stoch': td.get('stoch'),
             'adx':   td.get('adx'),   'bb':    td.get('bb'),
             'mm20':  td.get('mm20'),  'mm50':  td.get('mm50'), 'mm200': td.get('mm200'),
             'roc':   td.get('roc'),   'willr': td.get('willr'),
             'signaux': td.get('signaux', ''),
+            'sparkline': sparkline,
         }
         resultats.append(row)
-    except Exception:
-        pass
+    except Exception as e:
+        scan_errors.append({'ticker': ticker, 'raison': 'exception scan', 'detail': str(e)})
 
 resultats.sort(key=lambda x: x['score'], reverse=True)
 resultats = resultats[:TOP_N]
 print('OK: ' + str(len(resultats)) + ' opportunites sur ' + str(len(tickers)) + ' actions')
+if scan_errors:
+    print('Erreurs: ' + str(len(scan_errors)) + ' tickers')
+    err_path = Path('docs/scan_errors.json')
+    err_path.write_text(json.dumps(scan_errors, ensure_ascii=False, indent=2), encoding='utf-8')
 
 # ══════════════════════════════════════════════════════════════
 # GENERATION HTML
@@ -495,6 +536,39 @@ page.append('.cmp-header{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 page.append('.cmp-hcol{flex:1;background:#0d1520;border-radius:8px;padding:8px 10px;text-align:center;min-width:80px}')
 page.append('.cmp-htk{font-family:monospace;font-weight:900;color:#00d4aa;font-size:13px}')
 page.append('.cmp-hnom{font-size:9px;color:#64748b;margin-top:2px}')
+# Sparkline
+page.append('.spark{display:inline-block;vertical-align:middle}')
+# Divergence badge
+page.append('.div-badge{font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;font-family:monospace;white-space:nowrap}')
+page.append('.div-fond{background:#10b98118;color:#10b981;border:1px solid #10b98133}')
+page.append('.div-tech{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}')
+# Column picker modal
+page.append('.col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}')
+page.append('.col-item{display:flex;align-items:center;gap:5px;background:#0d1520;border-radius:6px;padding:6px 8px;cursor:pointer;border:1px solid transparent}')
+page.append('.col-item.pinned{border-color:#00d4aa44}')
+page.append('.col-item input{accent-color:#00d4aa;cursor:pointer}')
+page.append('.col-item label{font-size:10px;color:#94a3b8;cursor:pointer;font-family:monospace}')
+# Sub-score filter bar
+page.append('.ssf{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center}')
+page.append('.ssf-lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px}')
+page.append('.ssf-item{display:flex;align-items:center;gap:4px;background:#0d1520;border:1px solid #1e2d45;border-radius:6px;padding:4px 8px}')
+page.append('.ssf-item label{font-size:10px;color:#64748b;font-family:monospace}')
+page.append('.ssf-item input{width:42px;background:#0a0e1a;border:none;color:#00d4aa;font-size:11px;font-family:monospace;text-align:center;outline:none}')
+# Theme toggle
+page.append('.theme-btn{background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33;font-size:13px;padding:6px 10px;border-radius:8px;cursor:pointer;border-width:1px}')
+# Sort multi indicator
+page.append('.sort-badge{font-size:8px;background:#00d4aa;color:#000;border-radius:3px;padding:0 3px;margin-left:2px;font-weight:900}')
+# Light theme overrides
+page.append('body.light{background:#f0f4f8;color:#1e293b}')
+page.append('body.light .hdr,body.light .modal,body.light .tw,body.light .stat,body.light .filters,body.light .mdesc,body.light .mrow .mbtn,body.light .guide-page,body.light .guide-header,body.light .guide-card,body.light .login-box{background:#fff;border-color:#cbd5e1}')
+page.append('body.light .cfg-item,body.light .col-item,body.light .ssf-item,body.light .card{background:#f8fafc;border-color:#e2e8f0}')
+page.append('body.light tbody td{border-bottom-color:#e2e8f0}')
+page.append('body.light tbody tr:nth-child(even) td{background:#f8fafc}')
+page.append('body.light tbody tr:hover td{background:#eff6ff!important}')
+page.append('body.light thead th{background:#f1f5f9;color:#64748b}')
+page.append('body.light .tk{color:#0284c7}')
+page.append('body.light .ct{color:#94a3b8}')
+page.append('body.light select,body.light input[type=text],body.light input[type=number]{background:#fff;border-color:#cbd5e1;color:#1e293b}')
 page.append('.login-screen{display:flex;position:fixed;inset:0;background:#0a0e1a;z-index:100;align-items:center;justify-content:center}')
 page.append('.login-box{background:#111827;border:1px solid #1e2d45;border-radius:16px;padding:36px 32px;width:90%;max-width:360px;text-align:center}')
 page.append('.login-logo{font-family:monospace;font-size:22px;font-weight:900;color:#00d4aa;margin-bottom:6px}')
@@ -547,7 +621,9 @@ page.append('<div><div class="htitle">&#128225; Stock Screener</div>')
 page.append('<div class="hsub">' + NSCAN + ' actions scannees - Yahoo Finance - ' + DATE + '</div></div>')
 page.append('<div class="hbtns">')
 page.append('<span style="font-family:monospace;font-size:10px;color:#64748b" id="nxt"></span>')
+page.append('<button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Mode clair/sombre">&#9788;</button>')
 page.append('<button class="hbtn hbtn-guide" onclick="openGuide()">&#128218; Guide</button>')
+page.append('<button class="hbtn" onclick="openCols()" style="background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44">&#9638; Colonnes</button>')
 page.append('<button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>')
 page.append('<button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>')
 page.append('<button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>')
@@ -1236,7 +1312,17 @@ page.append('</div>')
 page.append('<div class="tabs">')
 page.append('<div class="tab on" id="tab-all" onclick="setTab(\'all\')">Toutes <span class="bdg" id="b-all">0</span></div>')
 page.append('<div class="tab" id="tab-pea" onclick="setTab(\'pea\')">PEA <span class="bdg" id="b-pea">0</span></div>')
+page.append('<div class="tab" id="tab-div" onclick="setTab(\'div\')">&#9888; Divergences <span class="bdg" id="b-div">0</span></div>')
 page.append('<div class="tab" id="tab-imp" onclick="setTab(\'imp\')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>')
+page.append('</div>')
+# Sub-score filters
+page.append('<div class="ssf">')
+page.append('<span class="ssf-lbl">Filtres scores:</span>')
+page.append('<div class="ssf-item"><label>Value&ge;</label><input type="number" id="f-sv" value="0" min="0" max="100" step="5" onchange="render()"></div>')
+page.append('<div class="ssf-item"><label>Growth&ge;</label><input type="number" id="f-sg" value="0" min="0" max="100" step="5" onchange="render()"></div>')
+page.append('<div class="ssf-item"><label>Div&ge;</label><input type="number" id="f-sd" value="0" min="0" max="100" step="5" onchange="render()"></div>')
+page.append('<div class="ssf-item"><label>Tech&ge;</label><input type="number" id="f-st" value="0" min="0" max="100" step="5" onchange="render()"></div>')
+page.append('<div class="ssf-item"><label>Mom&ge;</label><input type="number" id="f-smom" value="0" min="0" max="100" step="5" onchange="render()"></div>')
 page.append('</div>')
 page.append('<div class="stale-banner" id="stale-banner">&#9888; Donnees potentiellement perimees — dernier scan: ' + DATE + '. Weekend ou jour ferie ?</div>')
 page.append('<div class="stats" id="stats"></div>')
@@ -1245,6 +1331,16 @@ page.append('<div class="empty" id="empty" style="display:none">Aucun resultat</
 page.append('<div class="card-list" id="card-list"></div>')
 page.append('<div class="disc">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>')
 page.append('</div>')
+
+# ══ MODAL COLONNES ══
+page.append('<div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">')
+page.append('<button class="modal-close" onclick="closeCols()">&#10005;</button>')
+page.append('<h3>&#9638; Colonnes affichees</h3>')
+page.append('<div style="font-size:10px;color:#64748b;margin-bottom:10px">Cochez pour afficher. Decochez pour masquer.</div>')
+page.append('<div class="col-grid" id="col-grid"></div>')
+page.append('<button class="modal-btn modal-btn-ok" onclick="applyCols()">&#10003; Appliquer</button>')
+page.append('<button class="modal-btn modal-btn-cancel" onclick="resetCols()" style="margin-top:8px">Reinitialiser par defaut</button>')
+page.append('</div></div>')
 
 # ══ MODAL COMPARATEUR ══
 page.append('<div class="modal-bg" id="modal-cmp"><div class="modal" style="max-width:700px">')
@@ -1264,14 +1360,48 @@ page.append('var GH_REPO="screener";')
 page.append('var GH_TOKEN="VOTRE_GH_TOKEN";')
 
 js = r"""
-var mode="combine",curTab="all",sortCol="score",sortDir=-1;
+var mode="combine",curTab="all";
+var sortCols=[{col:"score",dir:-1}];
 var CMP_SET={};
+var USER_COLS=null;
 
-// ── Fraicheur des donnees ──
+// All available columns definition
+var ALL_COLS_DEF={
+  fond:['ticker','spark','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','smom','score','divergence'],
+  tech:['ticker','spark','prix','rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc','st','smom','signaux'],
+  combine:['ticker','spark','prix','per','roe','div','rsi','macd','cci','mm200','graham','fcfy','sv','st','smom','score','divergence','signaux']
+};
+var CL={ticker:'Action',spark:'Cours 60j',prix:'Cours',per:'PER',pbv:'P/Book',roe:'ROE%',marge:'Marge%',div:'Div%',bpa:'BPA%',ev:'EV/EBITDA',peg:'PEG',ps:'P/S',pfcf:'P/FCF',graham:'Graham%',cr:'Curr.R',de:'D/E%',fcfy:'FCF Yld',sv:'Score V',sg:'Score G',sd:'Score D',st:'Score T',smom:'Momentum',score:'Score',divergence:'Diverg.',rsi:'RSI',macd:'MACD',cci:'CCI',stoch:'Stoch',adx:'ADX',mm20:'MM20%',mm50:'MM50%',mm200:'MM200%',willr:'W%R',roc:'RoC%',signaux:'Signaux'};
+
+// localStorage helpers
+var LS_KEY='screener_prefs_v3';
+function savePrefs(){
+  try{
+    localStorage.setItem(LS_KEY,JSON.stringify({
+      cfg:CFG, sortCols:sortCols, userCols:USER_COLS,
+      theme:document.body.classList.contains('light')?'light':'dark',
+      filters:{q:'',mkt:'all',sect:'all',ms:CFG.scoreMin,pea:'0',sv:0,sg:0,sd:0,st:0,smom:0}
+    }));
+  }catch(e){}
+}
+function loadPrefs(){
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(!raw)return;
+    var p=JSON.parse(raw);
+    if(p.cfg)Object.assign(CFG,p.cfg);
+    if(p.sortCols)sortCols=p.sortCols;
+    if(p.userCols)USER_COLS=p.userCols;
+    if(p.theme==='light')document.body.classList.add('light');
+    document.getElementById('ms').value=CFG.scoreMin;
+  }catch(e){}
+}
+
+// Freshness check
 function checkFreshness(){
   try{
     var parts=SCAN_DATE.split(/[/ :]/);
-    var d=new Date(parts[2],parts[1]-1,parts[0],parts[3]||7,parts[4]||0);
+    var d=new Date(parts[2],parts[1]-1,parts[0],parseInt(parts[3])||7,parseInt(parts[4])||0);
     var diff=(Date.now()-d)/3600000;
     var el=document.getElementById('stale-banner');
     if(diff>72&&el)el.style.display='flex';
@@ -1287,6 +1417,7 @@ function buildSects(){
   for(i=0;i<s.length;i++){o=document.createElement('option');o.value=s[i];o.text=s[i]==='all'?'Tous secteurs':s[i];se.appendChild(o);}
 }
 buildSects();
+loadPrefs();
 
 function nextUpdate(){
   var now=new Date(),nxt=new Date();
@@ -1295,6 +1426,13 @@ function nextUpdate(){
   var el=document.getElementById('nxt');if(el)el.textContent='Scan auto: '+h+'h'+m+'m';
 }
 nextUpdate();setInterval(nextUpdate,60000);
+
+// Theme
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent=document.body.classList.contains('light')?'\u263D':'\u2600';
+  savePrefs();
+}
 
 var DESCS={combine:'Mode Combine: fondamentaux + technique. Recommande.',fond:'Mode Fondamental: PER, ROE, dividende, croissance.',tech:'Mode Technique: RSI, MACD, CCI, Stochastique, MM.'};
 
@@ -1305,13 +1443,13 @@ function setMode(m){
 }
 function setTab(t){
   curTab=t;
-  ['all','pea','imp'].forEach(function(x){var el=document.getElementById('tab-'+x);if(el)el.className='tab'+(x===t?' on':'');});
+  ['all','pea','div','imp'].forEach(function(x){var el=document.getElementById('tab-'+x);if(el)el.className='tab'+(x===t?' on':'');});
   render();
 }
-
 function openGuide(){document.getElementById('guide-page').className='guide-page open';}
 function closeGuide(){document.getElementById('guide-page').className='guide-page';}
 
+// Scoring functions
 function lsv(r){
   var p=0;
   if(CFG.tPer&&r.per)p+=r.per<=10?40:r.per<=15?28:r.per<=CFG.perMax?15:0;
@@ -1335,18 +1473,52 @@ function lsg(r){
 function lsd(r){var p=0;if(r.div)p+=r.div>=6?60:r.div>=4?45:r.div>=3?30:r.div>0?15:0;return Math.min(100,p);}
 function lst(r){
   var p=0;
-  if(CFG.tRsi&&r.rsi!==null&&r.rsi!==undefined){if(r.rsi<=30)p+=28;else if(r.rsi<=CFG.rsiSurvente)p+=18;else if(r.rsi<=50)p+=8;}
-  if(CFG.tMacd&&r.macd!==null&&r.macd!==undefined){if(r.macd>0)p+=15;else if(r.macd>-0.1)p+=5;}
-  if(CFG.tCci&&r.cci!==null&&r.cci!==undefined){if(r.cci<CFG.cciSurvente)p+=18;else if(r.cci>=50&&r.cci<=150)p+=12;else if(r.cci>0)p+=6;}
-  if(CFG.tStoch&&r.stoch!==null&&r.stoch!==undefined){if(r.stoch<=20)p+=14;else if(r.stoch<=CFG.stochSurvente)p+=9;}
+  if(CFG.tRsi&&r.rsi!==null)if(r.rsi<=30)p+=28;else if(r.rsi<=CFG.rsiSurvente)p+=18;else if(r.rsi<=50)p+=8;
+  if(CFG.tMacd&&r.macd!==null)if(r.macd>0)p+=15;else if(r.macd>-0.1)p+=5;
+  if(CFG.tCci&&r.cci!==null)if(r.cci<CFG.cciSurvente)p+=18;else if(r.cci>=50&&r.cci<=150)p+=12;else if(r.cci>0)p+=6;
+  if(CFG.tStoch&&r.stoch!==null)if(r.stoch<=20)p+=14;else if(r.stoch<=CFG.stochSurvente)p+=9;
   if(CFG.tMm&&r.mm20!==null&&r.mm50!==null&&r.mm200!==null&&r.mm20>0&&r.mm50>0&&r.mm200>0)p+=15;
   if(CFG.tAdx&&r.adx!==null&&r.adx>=CFG.adxMin)p+=5;
-  if(CFG.tWillr&&r.willr!==null&&r.willr!==undefined){if(r.willr<=-80)p+=8;else if(r.willr<=CFG.willrSurvente)p+=4;}
-  if(CFG.tRoc&&r.roc!==null&&r.roc!==undefined&&r.roc>=CFG.rocMin)p+=5;
+  if(CFG.tWillr&&r.willr!==null)if(r.willr<=-80)p+=8;else if(r.willr<=CFG.willrSurvente)p+=4;
+  if(CFG.tRoc&&r.roc!==null&&r.roc>=CFG.rocMin)p+=5;
+  return Math.min(100,p);
+}
+function lsmom(r){
+  var p=0;
+  if(r.roc!==null&&r.roc!==undefined)p+=r.roc>10?40:r.roc>5?25:r.roc>0?10:0;
+  if(r.willr!==null&&r.willr!==undefined)p+=r.willr<=-80?35:r.willr<=-60?20:r.willr<=-40?8:0;
+  if(r.macd!==null&&r.macd!==undefined)p+=r.macd>0?25:r.macd>-0.1?10:0;
   return Math.min(100,p);
 }
 function ls(r){var sv=lsv(r),sg=lsg(r),sd=lsd(r),st=lst(r),tf=CFG.poidsValue+CFG.poidsGrowth+CFG.poidsDividende;return Math.round(Math.round(sv*CFG.poidsValue/tf+sg*CFG.poidsGrowth/tf+sd*CFG.poidsDividende/tf)*(1-CFG.poidsTechnique/100)+st*(CFG.poidsTechnique/100));}
 function getScore(r){if(mode==='fond')return Math.round(lsv(r)*0.4+lsg(r)*0.35+lsd(r)*0.25);if(mode==='tech')return lst(r);return ls(r);}
+
+// Multi-column sort
+function doSort(col){
+  if(sortCols.length>0&&sortCols[0].col===col){
+    sortCols[0].dir*=-1;
+  } else {
+    sortCols=sortCols.filter(function(s){return s.col!==col;});
+    sortCols.unshift({col:col,dir:-1});
+    if(sortCols.length>3)sortCols=sortCols.slice(0,3);
+  }
+  savePrefs();render();
+}
+function compareRows(a,b){
+  for(var i=0;i<sortCols.length;i++){
+    var s=sortCols[i],col=s.col,dir=s.dir;
+    var av,bv;
+    if(col==='score'){av=getScore(a);bv=getScore(b);}
+    else if(col==='smom'){av=lsmom(a);bv=lsmom(b);}
+    else{av=a[col];bv=b[col];}
+    if(av===null||av===undefined){if(bv===null||bv===undefined)continue;return 1;}
+    if(bv===null||bv===undefined)return -1;
+    var na=parseFloat(av),nb=parseFloat(bv);
+    var diff=!isNaN(na)&&!isNaN(nb)?dir*(na-nb):dir*String(av).localeCompare(String(bv));
+    if(diff!==0)return diff;
+  }
+  return 0;
+}
 
 function doFilter(){
   var q=(document.getElementById('q').value||'').toLowerCase();
@@ -1354,6 +1526,11 @@ function doFilter(){
   var sec=document.getElementById('sect').value;
   var ms=parseFloat(document.getElementById('ms').value)||0;
   var po=document.getElementById('peaOnly').value==='1';
+  var fsv=parseFloat(document.getElementById('f-sv').value)||0;
+  var fsg=parseFloat(document.getElementById('f-sg').value)||0;
+  var fsd=parseFloat(document.getElementById('f-sd').value)||0;
+  var fst=parseFloat(document.getElementById('f-st').value)||0;
+  var fsmom=parseFloat(document.getElementById('f-smom').value)||0;
   var src=(curTab==='imp'&&IMP_DATA)?IMP_DATA:RAW_ORIG;
   var out=[],i,r;
   for(i=0;i<src.length;i++){
@@ -1361,72 +1538,84 @@ function doFilter(){
     if(getScore(r)<ms)continue;
     if(po&&!r.pea)continue;
     if(curTab==='pea'&&!r.pea)continue;
+    if(curTab==='div'&&!r.divergence)continue;
     if(mkt==='eu'&&(r.pays==='US'||r.pays==='CA'||r.pays==='AU'))continue;
     if(mkt==='us'&&r.pays!=='US')continue;
     if(mkt==='ca'&&r.pays!=='CA')continue;
     if(mkt==='other'&&(r.pays==='US'||r.pays==='CA'||r.pays==='FR'||r.pays==='DE'||r.pays==='GB'||r.pays==='NL'||r.pays==='ES'||r.pays==='IT'||r.pays==='CH'))continue;
     if(sec!=='all'&&r.secteur!==sec)continue;
     if(q&&r.ticker.toLowerCase().indexOf(q)===-1&&r.nom.toLowerCase().indexOf(q)===-1)continue;
+    if(lsv(r)<fsv||lsg(r)<fsg||lsd(r)<fsd||lst(r)<fst||lsmom(r)<fsmom)continue;
     out.push(r);
   }
-  out.sort(function(a,b){
-    if(sortCol==='score')return sortDir*(getScore(b)-getScore(a));
-    var av=a[sortCol],bv=b[sortCol];
-    if(av===null||av===undefined)return 1;if(bv===null||bv===undefined)return -1;
-    var na=parseFloat(av),nb=parseFloat(bv);
-    if(!isNaN(na)&&!isNaN(nb))return sortDir*(na-nb);
-    return sortDir*String(av).localeCompare(String(bv));
-  });
+  out.sort(compareRows);
   return out;
 }
 
-function bH(v){var pct=Math.min(v||0,100),c=pct>=70?'#10b981':pct>=50?'#f59e0b':'#64748b';return '<div class="bw"><div class="br"><div class="bf" style="width:'+pct+'%;background:'+c+'"></div></div><span style="font-family:monospace;font-size:11px;color:'+c+';font-weight:700">'+Math.round(pct)+'</span></div>';}
-function mmC(v){if(v===null||v===undefined)return '<span style="color:#2a3a52">-</span>';var c=v>=0?'#10b981':'#ef4444';return '<span style="font-family:monospace;font-size:11px;color:'+c+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</span>';}
+// Sparkline SVG renderer
+function sparkSVG(data){
+  if(!data||data.length<2)return '<span style="color:#2a3a52;font-size:9px">-</span>';
+  var w=70,h=22,pts=data,n=pts.length;
+  var xStep=w/(n-1);
+  var coords=pts.map(function(v,i){return [Math.round(i*xStep),Math.round(h-(v/100*h))];});
+  var path=coords.map(function(p,i){return (i===0?'M':'L')+p[0]+' '+p[1];}).join(' ');
+  var last=pts[pts.length-1],first=pts[0];
+  var trend=last>first+5?'#10b981':last<first-5?'#ef4444':'#64748b';
+  var dot=coords[coords.length-1];
+  return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<path d="'+path+'" fill="none" stroke="'+trend+'" stroke-width="1.5" stroke-linejoin="round"/>'
+    +'<circle cx="'+dot[0]+'" cy="'+dot[1]+'" r="2" fill="'+trend+'"/>'
+    +'</svg>';
+}
 
-// ── Tooltips definitions ──
+// Tooltips
 var TIPS={
-  ticker:'Action / entreprise. Cliquez sur un ticker pour voir sur Yahoo Finance.',
-  prix:'Dernier cours connu au moment du scan.',
-  per:'Price-to-Earnings: cours / benefice par action. Moins c\'est eleve, moins vous payez les benefices.',
-  pbv:'Price-to-Book: cours / valeur comptable. <1 = decote sur actifs.',
-  roe:'Return on Equity: benefice net / capitaux propres. Mesure l\'efficacite de l\'entreprise.',
-  marge:'Marge nette: benefice net / chiffre d\'affaires.',
-  div:'Rendement du dividende annuel en % du cours.',
-  bpa:'Croissance des benefices par action (annee en cours vs precedente).',
-  ev:'EV/EBITDA: valorisation entreprise independante de la structure financiere.',
-  peg:'PER / croissance. <1 = sous-evalue par rapport a sa croissance (Peter Lynch).',
-  ps:'Price-to-Sales: cours / CA. Utile quand le PER n\'est pas disponible.',
-  pfcf:'Price-to-Free Cash Flow. Plus fiable que le PER car difficile a manipuler.',
-  graham:'Ecart en % entre le cours et la valeur Graham (sqrt 22.5 x BPA x VNC). Positif = sous-evalue.',
-  cr:'Current Ratio: actifs courants / passifs courants. >1.5 = bonne liquidite.',
-  de:'Debt/Equity: dette totale / capitaux propres. Plus c\'est bas, moins l\'entreprise est endetee.',
-  fcfy:'FCF Yield: free cash flow / capitalisation. Comparable a un rendement obligataire.',
-  sv:'Score Valorisation /100: PER, PBV, EV, P/S, P/FCF, Graham.',
-  sg:'Score Croissance /100: ROE, BPA, PEG, Current Ratio, D/E, FCF Yield.',
-  sd:'Score Dividende /100: rendement et payout ratio.',
-  st:'Score Technique /100: RSI, MACD, CCI, Stoch, ADX, MM, Williams, RoC.',
-  score:'Score global ponderable dans Criteres. Combine les 4 dimensions.',
-  rsi:'RSI 14j: <30 survente (signal achat), >70 surachat.',
-  macd:'MACD 12/26/9: positif = momentum haussier.',
-  cci:'CCI 20j: <-100 survente, >+100 tendance haussiere.',
-  stoch:'Stochastique %K 14j: <20 survente, >80 surachat.',
-  adx:'ADX 14j: force de tendance. >20 = tendance etablie, >40 = forte.',
-  mm20:'Ecart cours / MM20j. Positif = cours au-dessus de la moyenne.',
-  mm50:'Ecart cours / MM50j.',
-  mm200:'Ecart cours / MM200j. Tres important pour la tendance long terme.',
-  willr:'Williams %R 14j: <-80 survente (signal achat), >-20 surachat.',
-  roc:'Rate of Change 12p: vitesse du mouvement. >+5% = acceleration haussiere.',
+  ticker:'Action. Cliquez pour voir sur Yahoo Finance.',spark:'Mini-courbe des 60 derniers jours. Vert=hausse, Rouge=baisse.',
+  prix:'Dernier cours au moment du scan.',per:'PER: cours/benefice. Moins c'est eleve, moins vous payez les benefices.',
+  pbv:'P/Book: cours/valeur comptable. <1 = decote sur actifs.',roe:'ROE: benefice/capitaux propres. Mesure l'efficacite.',
+  marge:'Marge nette: benefice net/CA.',div:'Rendement dividende annuel en % du cours.',
+  bpa:'Croissance des benefices par action.',ev:'EV/EBITDA: valorisation independante de la structure financiere.',
+  peg:'PER/croissance. <1 = sous-evalue vs sa croissance (Peter Lynch).',
+  ps:'P/S: cours/CA. Utile quand le PER est indisponible.',
+  pfcf:'P/FCF: plus fiable que le PER car difficile a manipuler.',
+  graham:'Ecart vs valeur Graham sqrt(22.5xBPAxVNC). Positif=sous-evalue.',
+  cr:'Current Ratio: actifs/passifs courants. >1.5 = bonne liquidite.',
+  de:'D/E: dette/capitaux propres. Bas = moins endetee.',
+  fcfy:'FCF Yield: free cash flow/capitalisation. Comparable a un rendement obligataire.',
+  sv:'Score Valorisation: PER,PBV,EV,P/S,P/FCF,Graham.',
+  sg:'Score Croissance: ROE,BPA,PEG,Current Ratio,D/E,FCF Yield.',
+  sd:'Score Dividende: rendement et payout ratio.',
+  st:'Score Technique: RSI,MACD,CCI,Stoch,ADX,MM,Williams,RoC.',
+  smom:'Score Momentum: RoC+Williams %R+MACD. Mesure l'acceleration du cours.',
+  score:'Score global = fondamentaux + technique selon les poids.',
+  divergence:'FOND+: bons fondamentaux + technique faible = opportunite. TECH+: technique fort + fondamentaux faibles = prudence.',
+  rsi:'RSI 14j: <30 survente, >70 surachat.',macd:'MACD 12/26/9: positif = momentum haussier.',
+  cci:'CCI 20j: <-100 survente, >+100 tendance.',stoch:'Stoch %K 14j: <20 survente, >80 surachat.',
+  adx:'ADX: force de tendance. >20=etablie, >40=forte.',
+  mm20:'Ecart cours/MM20j.',mm50:'Ecart cours/MM50j.',mm200:'Ecart cours/MM200j (tendance long terme).',
+  willr:'Williams %R 14j: <-80 survente, >-20 surachat.',
+  roc:'Rate of Change 12p: vitesse du mouvement. >+5%=acceleration.',
   signaux:'Signaux techniques actifs au moment du scan.'
 };
+
+function thLabel(col,sorted,dir,rank){
+  var lbl=CL[col]||col;
+  var tip=TIPS[col]?'<span class="tip-ico">?</span><div class="tip">'+TIPS[col]+'</div>':'';
+  var sortInd=sorted?(dir>0?' ^':' v'):'';
+  var rankBadge=rank>1?'<span class="sort-badge">'+rank+'</span>':'';
+  return '<div class="th-wrap">'+lbl+sortInd+rankBadge+tip+'</div>';
+}
 
 function cH(col,r){
   var v=r[col];
   if(col==='ticker'){
     var tg='';if(r.pea)tg+='<span class="ptag">PEA</span>';if(r._imported)tg+='<span class="imptag">IMP</span>';
     var cmpOn=CMP_SET[r.ticker]?'on':'';
-    var cmpBtn='<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(\''+r.ticker+'\',this)">&#9878;</button>';
-    return '<div><span class="tk" style="cursor:pointer" onclick="window.open(\'https://finance.yahoo.com/quote/'+r.ticker+'\',\'_blank\')">'+r.ticker+'</span>'+tg+cmpBtn+'</div><div class="nm">'+r.nom+'</div><div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+    return '<div><span class="tk" style="cursor:pointer" onclick="window.open('https://finance.yahoo.com/quote/'+r.ticker+'','_blank')">'+r.ticker+'</span>'+tg
+      +'<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(''+r.ticker+'',this)">&#9878;</button></div>'
+      +'<div class="nm">'+r.nom+'</div><div class="ct">'+r.pays+' - '+r.secteur+'</div>';
   }
+  if(col==='spark')return sparkSVG(r.sparkline);
   if(col==='prix')return v!==null?'<span style="font-family:monospace">'+(r.devise==='USD'?'$':r.devise==='GBP'?'&pound;':r.devise==='CAD'?'C$':r.devise==='AUD'?'A$':'')+parseFloat(v).toFixed(2)+'</span>':'-';
   if(col==='per')return v?'<span style="font-family:monospace;font-size:11px;color:'+(v<=12?'#10b981':v<=25?'#f59e0b':'#ef4444')+'">'+parseFloat(v).toFixed(1)+'x</span>':'-';
   if(col==='pbv')return v?'<span style="font-family:monospace;font-size:11px;color:#94a3b8">'+parseFloat(v).toFixed(1)+'x</span>':'-';
@@ -1442,8 +1631,18 @@ function cH(col,r){
   if(col==='fcfy')return v?'<span style="font-family:monospace;font-size:11px;color:'+(v>=5?'#10b981':v>=2?'#f59e0b':'#94a3b8')+'">'+parseFloat(v).toFixed(1)+'%</span>':'-';
   if(col==='pfcf')return v?'<span style="font-family:monospace;font-size:11px;color:'+(v<=10?'#10b981':v<=20?'#f59e0b':'#94a3b8')+'">'+parseFloat(v).toFixed(1)+'x</span>':'-';
   if(col==='graham')return v!==null&&v!==undefined?'<span style="font-family:monospace;font-size:11px;color:'+(v>=20?'#10b981':v>=0?'#f59e0b':'#ef4444')+'">'+(v>=0?'+':'')+v.toFixed(0)+'%</span>':'-';
-  if(col==='sv'||col==='sg'||col==='sd'||col==='st')return v!==null?bH(v):'-';
+  if(col==='sv')return bH(lsv(r));
+  if(col==='sg')return bH(lsg(r));
+  if(col==='sd')return bH(lsd(r));
+  if(col==='st')return bH(lst(r));
+  if(col==='smom')return bH(lsmom(r));
   if(col==='score')return bH(getScore(r));
+  if(col==='divergence'){
+    if(!v)return '-';
+    var cls=v==='FOND+'?'div-fond':'div-tech';
+    var desc=v==='FOND+'?'Fond fort / Tech faible':'Tech fort / Fond faible';
+    return '<span class="div-badge '+cls+'" title="'+desc+'">'+v+'</span>';
+  }
   if(col==='rsi')return v!==null?'<span style="font-family:monospace;font-size:11px;font-weight:'+(v<=45||v>=70?700:400)+';color:'+(v<=30?'#10b981':v<=45?'#f59e0b':v>=70?'#ef4444':'#94a3b8')+'">'+v+'</span>':'-';
   if(col==='macd')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>0?'#10b981':v<0?'#ef4444':'#94a3b8')+'">'+parseFloat(v).toFixed(2)+'</span>':'-';
   if(col==='cci')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<-100?'#10b981':v>150?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
@@ -1452,58 +1651,25 @@ function cH(col,r){
   if(col==='willr')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<=-80?'#10b981':v>=-20?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
   if(col==='roc')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>5?'#10b981':v>0?'#f59e0b':'#ef4444')+'">'+(v>0?'+':'')+parseFloat(v).toFixed(1)+'%</span>':'-';
   if(col==='mm20'||col==='mm50'||col==='mm200')return mmC(v);
-  if(col==='signaux'){if(!v)return '-';var ps=v.split('|'),h='',i;for(i=0;i<ps.length;i++){var s=ps[i].trim();if(s)h+='<span class="chip">'+s+'</span>';}return h||'-';}
+  if(col==='signaux'){if(!v)return '-';var ps=v.split('|'),h2='',ii;for(ii=0;ii<ps.length;ii++){var s2=ps[ii].trim();if(s2)h2+='<span class="chip">'+s2+'</span>';}return h2||'-';}
   return v!==null&&v!==undefined?String(v):'-';
 }
 
-// ── Tooltip header builder ──
-var CL={ticker:'Action',prix:'Cours',per:'PER',pbv:'P/Book',roe:'ROE%',marge:'Marge%',div:'Div%',bpa:'BPA%',ev:'EV/EBITDA',peg:'PEG',ps:'P/S',pfcf:'P/FCF',graham:'Graham%',cr:'Curr.R',de:'D/E%',fcfy:'FCF Yld',sv:'Score V',sg:'Score G',sd:'Score D',st:'Score T',score:'Score',rsi:'RSI',macd:'MACD',cci:'CCI',stoch:'Stoch',adx:'ADX',mm20:'MM20%',mm50:'MM50%',mm200:'MM200%',willr:'W%R',roc:'RoC%',signaux:'Signaux'};
-function thLabel(col,sorted,dir){
-  var lbl=CL[col]||col;
-  var tip=TIPS[col]?'<span class="tip-ico">?</span><div class="tip">'+TIPS[col]+'</div>':'';
-  var sort=sorted?(dir>0?' ^':' v'):'';
-  return '<div class="th-wrap">'+lbl+sort+tip+'</div>';
-}
+function bH(v){var pct=Math.min(v||0,100),c=pct>=70?'#10b981':pct>=50?'#f59e0b':'#64748b';return '<div class="bw"><div class="br"><div class="bf" style="width:'+pct+'%;background:'+c+'"></div></div><span style="font-family:monospace;font-size:11px;color:'+c+';font-weight:700">'+Math.round(pct)+'</span></div>';}
+function mmC(v){if(v===null||v===undefined)return '<span style="color:#2a3a52">-</span>';var c=v>=0?'#10b981':'#ef4444';return '<span style="font-family:monospace;font-size:11px;color:'+c+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</span>';}
 
-var CF=['ticker','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','score'];
-var CT=['ticker','prix','rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc','st','signaux'];
-var CC=['ticker','prix','per','roe','div','rsi','macd','cci','mm200','graham','fcfy','sv','st','score','signaux'];
-
-function doSort(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}render();}
-
-// ── Mobile card renderer ──
-function renderCard(r){
-  var sc=getScore(r);
-  var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
-  var tgs='';if(r.pea)tgs+='<span class="ptag">PEA</span>';if(r._imported)tgs+='<span class="imptag">IMP</span>';
-  var cmpOn=CMP_SET[r.ticker]?'on':'';
-  var kv=function(k,v){return '<div class="card-kv"><div class="card-k">'+k+'</div><div class="card-v" style="color:#94a3b8">'+v+'</div></div>';};
-  return '<div class="card">'+
-    '<div class="card-top">'+
-      '<div><span class="card-tk" onclick="window.open(\'https://finance.yahoo.com/quote/'+r.ticker+'\',\'_blank\')" style="cursor:pointer">'+r.ticker+'</span>'+
-        '<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(\''+r.ticker+'\',this)" style="margin-left:6px">&#9878;</button></div>'+
-      '<span class="card-score" style="color:'+c+'">'+sc+'</span>'+
-    '</div>'+
-    '<div class="card-nom">'+r.nom+'</div>'+
-    '<div class="card-tags">'+tgs+'<span class="ptag" style="background:#3b82f618;color:#3b82f6;border-color:#3b82f633">'+r.secteur+'</span></div>'+
-    '<div class="card-grid">'+
-      kv('PER', r.per?parseFloat(r.per).toFixed(1)+'x':'-')+
-      kv('ROE', r.roe?r.roe+'%':'-')+
-      kv('Div', r.div?parseFloat(r.div).toFixed(1)+'%':'-')+
-      kv('RSI', r.rsi||'-')+
-      kv('MM200', r.mm200!==null&&r.mm200!==undefined?(r.mm200>=0?'+':'')+r.mm200+'%':'-')+
-      kv('Graham', r.graham!==null&&r.graham!==undefined?(r.graham>=0?'+':'')+r.graham+'%':'-')+
-    '</div>'+
-    (r.signaux?'<div class="card-sigs">'+r.signaux+'</div>':'')+
-  '</div>';
+function getActiveCols(){
+  if(USER_COLS&&USER_COLS[mode])return USER_COLS[mode];
+  return ALL_COLS_DEF[mode];
 }
 
 function render(){
   var data=doFilter(),i,j,r,c,sc;
-  var allN=data.length,peaN=0;
-  for(i=0;i<data.length;i++){if(data[i].pea)peaN++;}
+  var allN=data.length,peaN=0,divN=0;
+  for(i=0;i<data.length;i++){if(data[i].pea)peaN++;if(data[i].divergence)divN++;}
   document.getElementById('b-all').textContent=allN;
   document.getElementById('b-pea').textContent=peaN;
+  document.getElementById('b-div').textContent=divN;
   var ie=document.getElementById('b-imp');if(ie&&IMP_DATA)ie.textContent=IMP_DATA.length;
 
   var s70=0,s50=0,sumD=0,cntD=0,rsiLow=0;
@@ -1513,18 +1679,21 @@ function render(){
   var sh='';for(i=0;i<sd2.length;i++)sh+='<div class="stat"><div class="sl">'+sd2[i][0]+'</div><div class="sv" style="color:'+sd2[i][2]+'">'+sd2[i][1]+'</div></div>';
   document.getElementById('stats').innerHTML=sh;
 
-  var cols=mode==='fond'?CF:mode==='tech'?CT:CC;
+  var cols=getActiveCols();
+  var sortMap={};
+  for(i=0;i<sortCols.length;i++)sortMap[sortCols[i].col]=i+1;
   var thH='<tr>';
-  for(i=0;i<cols.length;i++){c=cols[i];thH+='<th class="'+(sortCol===c?'sorted':'')+'" onclick="doSort(\''+c+'\')">'+thLabel(c,sortCol===c,sortDir)+'</th>';}
+  for(i=0;i<cols.length;i++){
+    c=cols[i];
+    var isSorted=sortMap[c]>0;
+    var sdir=isSorted?(sortCols[sortMap[c]-1].dir):1;
+    thH+='<th class="'+(isSorted?'sorted':'')+'" onclick="doSort(''+c+'')">'+thLabel(c,isSorted,sdir,sortMap[c]||0)+'</th>';
+  }
   thH+='</tr>';
   document.getElementById('thead').innerHTML=thH;
 
   var empty=document.getElementById('empty');
-  if(!data.length){
-    document.getElementById('tbody').innerHTML='';
-    document.getElementById('card-list').innerHTML='';
-    empty.style.display='block';return;
-  }
+  if(!data.length){document.getElementById('tbody').innerHTML='';document.getElementById('card-list').innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   var rows='',cards='';
   for(i=0;i<data.length;i++){
@@ -1537,34 +1706,65 @@ function render(){
   document.getElementById('card-list').innerHTML=cards;
 }
 
-// ── Export CSV ──
+// Mobile cards
+function renderCard(r){
+  var sc=getScore(r),mom=lsmom(r);
+  var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
+  var tgs='';if(r.pea)tgs+='<span class="ptag">PEA</span>';if(r._imported)tgs+='<span class="imptag">IMP</span>';
+  if(r.divergence){var dc=r.divergence==='FOND+'?'div-fond':'div-tech';tgs+='<span class="div-badge '+dc+'" style="margin-left:3px">'+r.divergence+'</span>';}
+  var cmpOn=CMP_SET[r.ticker]?'on':'';
+  var kv=function(k,v){return '<div class="card-kv"><div class="card-k">'+k+'</div><div class="card-v" style="color:#94a3b8">'+v+'</div></div>';};
+  return '<div class="card">'
+    +'<div class="card-top"><div>'
+      +'<span class="card-tk" onclick="window.open('https://finance.yahoo.com/quote/'+r.ticker+'','_blank')" style="cursor:pointer">'+r.ticker+'</span>'
+      +'<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(''+r.ticker+'',this)" style="margin-left:6px">&#9878;</button>'
+    +'</div>'
+    +'<div style="text-align:right"><span class="card-score" style="color:'+c+'">'+sc+'</span>'
+      +(mom>=50?'<div style="font-size:9px;color:#3b82f6;font-family:monospace">Mom:'+mom+'</div>':'')
+    +'</div></div>'
+    +'<div class="card-nom">'+r.nom+'</div>'
+    +'<div class="card-tags">'+tgs+'<span class="ptag" style="background:#3b82f618;color:#3b82f6;border-color:#3b82f633">'+r.secteur+'</span></div>'
+    +(r.sparkline&&r.sparkline.length?'<div style="margin:6px 0">'+sparkSVG(r.sparkline)+'</div>':'')
+    +'<div class="card-grid">'
+      +kv('PER',r.per?parseFloat(r.per).toFixed(1)+'x':'-')
+      +kv('ROE',r.roe?r.roe+'%':'-')
+      +kv('Div',r.div?parseFloat(r.div).toFixed(1)+'%':'-')
+      +kv('RSI',r.rsi||'-')
+      +kv('MM200',r.mm200!==null&&r.mm200!==undefined?(r.mm200>=0?'+':'')+r.mm200+'%':'-')
+      +kv('Graham',r.graham!==null&&r.graham!==undefined?(r.graham>=0?'+':'')+r.graham+'%':'-')
+    +'</div>'
+    +(r.signaux?'<div class="card-sigs">'+r.signaux+'</div>':'')
+  +'</div>';
+}
+
+// Export CSV
 function exportCSV(){
   var data=doFilter();
   if(!data.length){alert('Aucune donnee a exporter.');return;}
-  var cols=['ticker','nom','secteur','pays','pea','devise','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','st','score','rsi','macd','cci','stoch','adx','bb','mm20','mm50','mm200','willr','roc','signaux'];
+  var cols=['ticker','nom','secteur','pays','pea','devise','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','st','smom','score','divergence','rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc','signaux'];
   var lines=[cols.join(';')],i,j,v;
   for(i=0;i<data.length;i++){
     var row=[];
     for(j=0;j<cols.length;j++){
-      v=cols[j]==='score'?getScore(data[i]):(data[i][cols[j]]!==null&&data[i][cols[j]]!==undefined?data[i][cols[j]]:'');
+      if(cols[j]==='score')v=getScore(data[i]);
+      else if(cols[j]==='smom')v=lsmom(data[i]);
+      else v=data[i][cols[j]]!==null&&data[i][cols[j]]!==undefined?data[i][cols[j]]:'';
       row.push(String(v).replace(/;/g,','));
     }
     lines.push(row.join(';'));
   }
   var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  var now=new Date();
-  a.download='screener_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.csv';
-  a.click();
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  var now=new Date();a.download='screener_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.csv';a.click();
 }
 
-// ── Comparateur ──
+// Comparateur
 function toggleCmp(ticker,btn){
   if(CMP_SET[ticker]){delete CMP_SET[ticker];btn.className='cmp-btn';}
   else{
-    if(Object.keys(CMP_SET).length>=4){alert('Maximum 4 actions comparables a la fois.');return;}
-    CMP_SET[ticker]=RAW_ORIG.filter(function(r){return r.ticker===ticker;})[0];
+    if(Object.keys(CMP_SET).length>=4){alert('Maximum 4 actions.');return;}
+    var found=RAW_ORIG.filter(function(r){return r.ticker===ticker;});
+    if(found.length)CMP_SET[ticker]=found[0];
     btn.className='cmp-btn on';
   }
   var n=Object.keys(CMP_SET).length;
@@ -1573,9 +1773,11 @@ function toggleCmp(ticker,btn){
 }
 function openComparator(){
   var tickers=Object.keys(CMP_SET);
-  if(!tickers.length){alert('Selectionnez au moins une action avec ⊕ dans le tableau.');return;}
-  var rows=[
+  if(!tickers.length){alert('Selectionnez des actions avec le bouton de comparaison.');return;}
+  var ROWS=[
     {k:'Score',f:function(r){return getScore(r);}},
+    {k:'Momentum',f:function(r){return lsmom(r);}},
+    {k:'Divergence',f:function(r){return r.divergence||'-';}},
     {k:'Cours',f:function(r){return r.prix?parseFloat(r.prix).toFixed(2)+' '+r.devise:'-';}},
     {k:'PER',f:function(r){return r.per?parseFloat(r.per).toFixed(1)+'x':'-';}},
     {k:'P/Book',f:function(r){return r.pbv?parseFloat(r.pbv).toFixed(1)+'x':'-';}},
@@ -1593,9 +1795,7 @@ function openComparator(){
     {k:'RSI',f:function(r){return r.rsi||'-';}},
     {k:'MACD',f:function(r){return r.macd!==null?parseFloat(r.macd).toFixed(2):'-';}},
     {k:'CCI',f:function(r){return r.cci!==null?Math.round(r.cci):'-';}},
-    {k:'Stoch.',f:function(r){return r.stoch!==null?Math.round(r.stoch):'-';}},
     {k:'ADX',f:function(r){return r.adx!==null?Math.round(r.adx):'-';}},
-    {k:'MM20 %',f:function(r){return r.mm20!==null&&r.mm20!==undefined?(r.mm20>=0?'+':'')+r.mm20.toFixed(1)+'%':'-';}},
     {k:'MM200 %',f:function(r){return r.mm200!==null&&r.mm200!==undefined?(r.mm200>=0?'+':'')+r.mm200.toFixed(1)+'%':'-';}},
     {k:'Williams %R',f:function(r){return r.willr!==null?Math.round(r.willr):'-';}},
     {k:'RoC %',f:function(r){return r.roc!==null?(r.roc>=0?'+':'')+parseFloat(r.roc).toFixed(1)+'%':'-';}},
@@ -1605,22 +1805,18 @@ function openComparator(){
     {k:'Score Tech',f:function(r){return lst(r);}},
   ];
   var h='<div class="cmp-header">';
-  for(var t=0;t<tickers.length;t++){
-    var r=CMP_SET[tickers[t]];
-    h+='<div class="cmp-hcol"><div class="cmp-htk">'+r.ticker+'</div><div class="cmp-hnom">'+r.nom+'</div></div>';
-  }
+  for(var t=0;t<tickers.length;t++){var ri=CMP_SET[tickers[t]];h+='<div class="cmp-hcol"><div class="cmp-htk">'+ri.ticker+'</div><div class="cmp-hnom">'+ri.nom+'</div>'+sparkSVG(ri.sparkline)+'</div>';}
   h+='</div>';
   var body='';
-  for(var ri=0;ri<rows.length;ri++){
-    var vals=[],maxV=-Infinity,minV=Infinity,numericVals=[];
-    for(var ti=0;ti<tickers.length;ti++){vals.push(rows[ri].f(CMP_SET[tickers[ti]]));}
-    for(var vi=0;vi<vals.length;vi++){var n=parseFloat(vals[vi]);if(!isNaN(n)){numericVals.push(n);if(n>maxV)maxV=n;if(n<minV)minV=n;}}
-    body+='<div class="cmp-row"><div class="cmp-lbl">'+rows[ri].k+'</div><div class="cmp-vals">';
+  for(var ri2=0;ri2<ROWS.length;ri2++){
+    var vals=[],maxV=-Infinity,minV=Infinity,nums=[];
+    for(var ti=0;ti<tickers.length;ti++){vals.push(ROWS[ri2].f(CMP_SET[tickers[ti]]));}
+    for(var vi=0;vi<vals.length;vi++){var n=parseFloat(vals[vi]);if(!isNaN(n)){nums.push(n);if(n>maxV)maxV=n;if(n<minV)minV=n;}}
+    body+='<div class="cmp-row"><div class="cmp-lbl">'+ROWS[ri2].k+'</div><div class="cmp-vals">';
     for(var vi2=0;vi2<vals.length;vi2++){
-      var n2=parseFloat(vals[vi2]);
-      var col='#94a3b8';
-      if(!isNaN(n2)&&numericVals.length>1){col=n2===maxV?'#10b981':n2===minV?'#ef4444':'#94a3b8';}
-      body+='<div class="cmp-val" style="color:'+col+'">'+vals[vi2]+'</div>';
+      var n2=parseFloat(vals[vi2]),col2='#94a3b8';
+      if(!isNaN(n2)&&nums.length>1)col2=n2===maxV?'#10b981':n2===minV?'#ef4444':'#94a3b8';
+      body+='<div class="cmp-val" style="color:'+col2+'">'+vals[vi2]+'</div>';
     }
     body+='</div></div>';
   }
@@ -1629,44 +1825,59 @@ function openComparator(){
 }
 function closeComparator(){document.getElementById('modal-cmp').className='modal-bg';}
 
+// Column picker
+function openCols(){
+  var cols=ALL_COLS_DEF[mode];
+  var active=getActiveCols();
+  var grid=document.getElementById('col-grid');grid.innerHTML='';
+  var allKeys=Object.keys(CL);
+  for(var i=0;i<allKeys.length;i++){
+    var col=allKeys[i];
+    var checked=active.indexOf(col)!==-1;
+    var item=document.createElement('div');item.className='col-item'+(checked?' pinned':'');
+    item.innerHTML='<input type="checkbox" id="chk-'+col+'" '+(checked?'checked':'')+'><label for="chk-'+col+'">'+(CL[col]||col)+'</label>';
+    grid.appendChild(item);
+  }
+  document.getElementById('modal-cols').className='modal-bg open';
+}
+function closeCols(){document.getElementById('modal-cols').className='modal-bg';}
+function applyCols(){
+  var allKeys=Object.keys(CL),newCols=[];
+  for(var i=0;i<allKeys.length;i++){var el=document.getElementById('chk-'+allKeys[i]);if(el&&el.checked)newCols.push(allKeys[i]);}
+  if(!newCols.length){alert('Selectionnez au moins une colonne.');return;}
+  if(!USER_COLS)USER_COLS={};
+  USER_COLS[mode]=newCols;
+  savePrefs();closeCols();render();
+}
+function resetCols(){
+  if(!USER_COLS)USER_COLS={};
+  delete USER_COLS[mode];
+  savePrefs();closeCols();render();
+}
+
+// Settings modal
 function openCfg(){
-  // Seuils
-  document.getElementById('c-per').value=CFG.perMax;
-  document.getElementById('c-pbv').value=CFG.pbvMax;
-  document.getElementById('c-ev').value=15;
-  document.getElementById('c-ps').value=CFG.psMax;
-  document.getElementById('c-pfcf').value=CFG.pfcfMax;
-  document.getElementById('c-graham').value=CFG.grahamMin;
-  document.getElementById('c-roe').value=CFG.roeMin;
-  document.getElementById('c-cr').value=CFG.crMin;
-  document.getElementById('c-de').value=CFG.deMax;
-  document.getElementById('c-fcfy').value=CFG.fcfyMin;
-  document.getElementById('c-rsi').value=CFG.rsiSurvente;
-  document.getElementById('c-stoch').value=CFG.stochSurvente;
-  document.getElementById('c-cci').value=CFG.cciSurvente;
-  document.getElementById('c-adx').value=CFG.adxMin;
-  document.getElementById('c-willr').value=CFG.willrSurvente;
-  document.getElementById('c-roc').value=CFG.rocMin;
-  document.getElementById('c-pv').value=CFG.poidsValue;
-  document.getElementById('c-pg').value=CFG.poidsGrowth;
-  document.getElementById('c-pd').value=CFG.poidsDividende;
-  document.getElementById('c-pt').value=CFG.poidsTechnique;
+  document.getElementById('c-per').value=CFG.perMax;document.getElementById('c-pbv').value=CFG.pbvMax;
+  document.getElementById('c-ev').value=15;document.getElementById('c-ps').value=CFG.psMax;
+  document.getElementById('c-pfcf').value=CFG.pfcfMax;document.getElementById('c-graham').value=CFG.grahamMin;
+  document.getElementById('c-roe').value=CFG.roeMin;document.getElementById('c-cr').value=CFG.crMin;
+  document.getElementById('c-de').value=CFG.deMax;document.getElementById('c-fcfy').value=CFG.fcfyMin;
+  document.getElementById('c-rsi').value=CFG.rsiSurvente;document.getElementById('c-stoch').value=CFG.stochSurvente;
+  document.getElementById('c-cci').value=CFG.cciSurvente;document.getElementById('c-adx').value=CFG.adxMin;
+  document.getElementById('c-willr').value=CFG.willrSurvente;document.getElementById('c-roc').value=CFG.rocMin;
+  document.getElementById('c-pv').value=CFG.poidsValue;document.getElementById('c-pg').value=CFG.poidsGrowth;
+  document.getElementById('c-pd').value=CFG.poidsDividende;document.getElementById('c-pt').value=CFG.poidsTechnique;
   document.getElementById('c-smin').value=CFG.scoreMin;
-  // Toggles
-  var togs={
-    'per':CFG.tPer,'pbv':CFG.tPbv,'ev':CFG.tEv,'ps':CFG.tPs,'pfcf':CFG.tPfcf,'graham':CFG.tGraham,
+  var togs={'per':CFG.tPer,'pbv':CFG.tPbv,'ev':CFG.tEv,'ps':CFG.tPs,'pfcf':CFG.tPfcf,'graham':CFG.tGraham,
     'roe':CFG.tRoe,'bpa':CFG.tBpa,'peg':CFG.tPeg,'cr':CFG.tCr,'de':CFG.tDe,'fcfy':CFG.tFcfy,
-    'rsi':CFG.tRsi,'macd':CFG.tMacd,'cci':CFG.tCci,'stoch':CFG.tStoch,'mm':CFG.tMm,'adx':CFG.tAdx,'willr':CFG.tWillr,'roc':CFG.tRoc
-  };
+    'rsi':CFG.tRsi,'macd':CFG.tMacd,'cci':CFG.tCci,'stoch':CFG.tStoch,'mm':CFG.tMm,'adx':CFG.tAdx,'willr':CFG.tWillr,'roc':CFG.tRoc};
   for(var k in togs){var el=document.getElementById('t-'+k);if(el)el.checked=!!togs[k];}
   document.getElementById('modal-cfg').className='modal-bg open';
 }
 function closeCfg(){document.getElementById('modal-cfg').className='modal-bg';}
 function applyCfg(){
-  var pv=parseFloat(document.getElementById('c-pv').value)||0,
-      pg=parseFloat(document.getElementById('c-pg').value)||0,
-      pd=parseFloat(document.getElementById('c-pd').value)||0,
-      pt=parseFloat(document.getElementById('c-pt').value)||0;
+  var pv=parseFloat(document.getElementById('c-pv').value)||0,pg=parseFloat(document.getElementById('c-pg').value)||0,
+      pd=parseFloat(document.getElementById('c-pd').value)||0,pt=parseFloat(document.getElementById('c-pt').value)||0;
   if(pv+pg+pd+pt!==100){alert('Les 4 poids doivent totaliser 100. Total: '+(pv+pg+pd+pt));return;}
   CFG.perMax=parseFloat(document.getElementById('c-per').value)||CFG.perMax;
   CFG.pbvMax=parseFloat(document.getElementById('c-pbv').value)||CFG.pbvMax;
@@ -1687,11 +1898,13 @@ function applyCfg(){
   CFG.scoreMin=parseFloat(document.getElementById('c-smin').value)||CFG.scoreMin;
   document.getElementById('ms').value=CFG.scoreMin;
   var tkeys=['per','pbv','ev','ps','pfcf','graham','roe','bpa','peg','cr','de','fcfy','rsi','macd','cci','stoch','mm','adx','willr','roc'];
-  var tmap={'per':'tPer','pbv':'tPbv','ev':'tEv','ps':'tPs','pfcf':'tPfcf','graham':'tGraham',
-            'roe':'tRoe','bpa':'tBpa','peg':'tPeg','cr':'tCr','de':'tDe','fcfy':'tFcfy',
-            'rsi':'tRsi','macd':'tMacd','cci':'tCci','stoch':'tStoch','mm':'tMm','adx':'tAdx','willr':'tWillr','roc':'tRoc'};
+  var tmap={'per':'tPer','pbv':'tPbv','ev':'tEv','ps':'tPs','pfcf':'tPfcf','graham':'tGraham','roe':'tRoe','bpa':'tBpa','peg':'tPeg','cr':'tCr','de':'tDe','fcfy':'tFcfy','rsi':'tRsi','macd':'tMacd','cci':'tCci','stoch':'tStoch','mm':'tMm','adx':'tAdx','willr':'tWillr','roc':'tRoc'};
   for(var i=0;i<tkeys.length;i++){var el2=document.getElementById('t-'+tkeys[i]);if(el2)CFG[tmap[tkeys[i]]]=el2.checked?1:0;}
-  closeCfg();render();
+  savePrefs();closeCfg();render();
+}
+function resetPrefs(){
+  try{localStorage.removeItem(LS_KEY);}catch(e){}
+  location.reload();
 }
 
 function openImp(){document.getElementById('modal-imp').className='modal-bg open';}
@@ -1701,15 +1914,15 @@ function importTickers(){
   var tks=txt.split(/[\n,;\s]+/).map(function(t){return t.trim().toUpperCase();}).filter(function(t){return t.length>0;});
   if(!tks.length){alert('Aucun ticker valide');return;}
   var found=[],notFound=[],i,j,hit;
-  for(i=0;i<tks.length;i++){hit=null;for(j=0;j<RAW_ORIG.length;j++){if(RAW_ORIG[j].ticker.toUpperCase()===tks[i]){hit=RAW_ORIG[j];break;}}if(hit){var r=JSON.parse(JSON.stringify(hit));r._imported=true;found.push(r);}else notFound.push(tks[i]);}
+  for(i=0;i<tks.length;i++){hit=null;for(j=0;j<RAW_ORIG.length;j++){if(RAW_ORIG[j].ticker.toUpperCase()===tks[i]){hit=RAW_ORIG[j];break;}}if(hit){var rr=JSON.parse(JSON.stringify(hit));rr._imported=true;found.push(rr);}else notFound.push(tks[i]);}
   IMP_DATA=found;
   var it=document.getElementById('tab-imp');if(it)it.style.display='';
   closeImp();setTab('imp');
-  if(notFound.length)alert(found.length+' ticker(s) trouves.\n'+notFound.length+' absents du dernier scan: '+notFound.join(', '));
+  if(notFound.length)alert(found.length+' ticker(s) trouves.\n'+notFound.length+' absents: '+notFound.join(', '));
 }
 
 function triggerScan(){
-  if(!GH_TOKEN||GH_TOKEN==='VOTRE_GH_TOKEN'){alert('Token GitHub non configure.\nDans generate.py, remplacez VOTRE_USERNAME et VOTRE_GH_TOKEN.');return;}
+  if(!GH_TOKEN||GH_TOKEN==='VOTRE_GH_TOKEN'){alert('Token GitHub non configure.');return;}
   var url='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/actions/workflows/scan.yml/dispatches';
   fetch(url,{method:'POST',headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main'})})
   .then(function(r){
@@ -1721,25 +1934,21 @@ function triggerScan(){
   }).catch(function(e){alert('Erreur: '+e.message);});
 }
 
-// ── LOGIN SHA-256 ──
+// LOGIN SHA-256
 var PWD_HASH='__PWD_HASH__';
 function doLogin(){
   var pwd=document.getElementById('login-pwd').value;
   if(!pwd){document.getElementById('login-err').textContent='Entrez un code.';return;}
   crypto.subtle.digest('SHA-256',new TextEncoder().encode(pwd)).then(function(buf){
     var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-    if(hex===PWD_HASH){
-      document.getElementById('login-screen').style.display='none';
-    } else {
-      document.getElementById('login-err').textContent='Code incorrect.';
-      document.getElementById('login-pwd').value='';
-      document.getElementById('login-pwd').focus();
-    }
+    if(hex===PWD_HASH){document.getElementById('login-screen').style.display='none';}
+    else{document.getElementById('login-err').textContent='Code incorrect.';document.getElementById('login-pwd').value='';document.getElementById('login-pwd').focus();}
   });
 }
 
 render();
 """
+
 
 page.append(js)
 page.append('</script></body></html>')
