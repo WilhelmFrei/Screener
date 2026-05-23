@@ -1372,15 +1372,6 @@ page.append('    }).catch(function(){err.textContent="Erreur navigateur.";});')
 page.append('  }')
 page.append('})();')
 page.append('</script>')
-page.append('<script>')
-page.append('var RAW_ORIG=' + DATA + ';')
-page.append('var CFG=' + CFG + ';')
-page.append('var IMP_DATA=null;')
-page.append('var SCAN_DATE="' + DATE + '";')
-page.append('var GH_OWNER="VOTRE_USERNAME";')
-page.append('var GH_REPO="screener";')
-page.append('var GH_TOKEN="VOTRE_GH_TOKEN";')
-
 js = r"""
 var mode="combine",curTab="all";
 var sortCols=[{col:"score",dir:-1}];
@@ -1964,6 +1955,14 @@ var PWD_HASH='__PWD_HASH__'; // reference uniquement
 render();
 """
 
+page.append('<script>')
+page.append('var RAW_ORIG=' + DATA + ';')
+page.append('var CFG=' + CFG + ';')
+page.append('var IMP_DATA=null;')
+page.append('var SCAN_DATE="' + DATE + '";')
+page.append('var GH_OWNER="VOTRE_USERNAME";')
+page.append('var GH_REPO="screener";')
+page.append('var GH_TOKEN="VOTRE_GH_TOKEN";')
 
 page.append(js)
 page.append('</script></body></html>')
