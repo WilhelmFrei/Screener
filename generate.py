@@ -1953,9 +1953,11 @@ function triggerScan(){
 var PWD_HASH='__PWD_HASH__'; // reference uniquement
 
 render();
+"}catch(e){document.body.insertAdjacentHTML('afterbegin','<div style=\"position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:12px;font-family:monospace;font-size:12px;z-index:9999;white-space:pre-wrap\">ERREUR JS: '+e.message+'\\n'+e.stack+'</div>');}
 """
 
 page.append('<script>')
+page.append('try{')
 page.append('var RAW_ORIG=' + DATA + ';')
 page.append('var CFG=' + CFG + ';')
 page.append('var IMP_DATA=null;')
