@@ -1389,12 +1389,14 @@ function loadPrefs(){
     var raw=localStorage.getItem(LS_KEY);
     if(!raw)return;
     var p=JSON.parse(raw);
-    if(p.cfg)Object.assign(CFG,p.cfg);
-    if(p.sortCols)sortCols=p.sortCols;
-    if(p.userCols)USER_COLS=p.userCols;
+    if(p.cfg&&typeof p.cfg==='object')Object.assign(CFG,p.cfg);
+    if(Array.isArray(p.sortCols)&&p.sortCols.length)sortCols=p.sortCols;
+    if(p.userCols&&typeof p.userCols==='object')USER_COLS=p.userCols;
     if(p.theme==='light')document.body.classList.add('light');
-    document.getElementById('ms').value=CFG.scoreMin;
-  }catch(e){}
+    var msEl=document.getElementById('ms');if(msEl)msEl.value=CFG.scoreMin;
+  }catch(e){
+    try{localStorage.removeItem(LS_KEY);}catch(e2){}
+  }
 }
 
 // Freshness check
