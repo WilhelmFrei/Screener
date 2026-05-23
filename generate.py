@@ -1351,6 +1351,27 @@ page.append('<button class="modal-btn modal-btn-cancel" onclick="closeComparator
 page.append('</div></div>')
 
 page.append('<script>')
+page.append('// LOGIN ISOLE — tourne avant tout le reste')
+page.append('(function(){')
+page.append('  var HASH="__PWD_HASH__";')
+page.append('  var screen=document.getElementById("login-screen");')
+page.append('  if(!screen)return;')
+page.append('  document.getElementById("login-btn").addEventListener("click",function(){tryLogin();});')
+page.append('  document.getElementById("login-pwd").addEventListener("keydown",function(e){if(e.key==="Enter")tryLogin();});')
+page.append('  function tryLogin(){')
+page.append('    var pwd=document.getElementById("login-pwd").value;')
+page.append('    var err=document.getElementById("login-err");')
+page.append('    if(!pwd){err.textContent="Entrez un code.";return;}')
+page.append('    err.textContent="...";')
+page.append('    crypto.subtle.digest("SHA-256",new TextEncoder().encode(pwd))')
+page.append('    .then(function(buf){')
+page.append('      var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");')
+page.append('      if(hex===HASH){screen.style.display="none";}')
+page.append('      else{err.textContent="Code incorrect.";document.getElementById("login-pwd").value="";document.getElementById("login-pwd").focus();}')
+page.append('    }).catch(function(){err.textContent="Erreur navigateur.";});')
+page.append('  }')
+page.append('})();')
+page.append('</script>')
 page.append('var RAW_ORIG=' + DATA + ';')
 page.append('var CFG=' + CFG + ';')
 page.append('var IMP_DATA=null;')
@@ -1936,17 +1957,8 @@ function triggerScan(){
   }).catch(function(e){alert('Erreur: '+e.message);});
 }
 
-// LOGIN SHA-256
-var PWD_HASH='__PWD_HASH__';
-function doLogin(){
-  var pwd=document.getElementById('login-pwd').value;
-  if(!pwd){document.getElementById('login-err').textContent='Entrez un code.';return;}
-  crypto.subtle.digest('SHA-256',new TextEncoder().encode(pwd)).then(function(buf){
-    var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-    if(hex===PWD_HASH){document.getElementById('login-screen').style.display='none';}
-    else{document.getElementById('login-err').textContent='Code incorrect.';document.getElementById('login-pwd').value='';document.getElementById('login-pwd').focus();}
-  });
-}
+// LOGIN SHA-256 gere dans le script isole ci-dessus
+var PWD_HASH='__PWD_HASH__'; // reference uniquement
 
 render();
 """
