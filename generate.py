@@ -438,8 +438,8 @@ DATA_JSON = json.dumps(resultats, ensure_ascii=False, default=str)
 DATE_STR  = d_fin.strftime('%d/%m/%Y %H:%M')
 CFG_JSON  = json.dumps({
     'perMax':PER_MAX,'pbvMax':PBV_MAX,'roeMin':ROE_MIN,
-    'rsiSurvente':RSI_SV,'cciSurvente':CCI_SV,'stochSurvente':STOCH_SV,'adxMin':ADX_MIN,
-    'poidsValue':POIDS_V,'poidsGrowth':POIDS_G,'poidsDividende':POIDS_D,'poidsTechnique':POIDS_T,
+    'rsiSurvente':RSI_SURVENTE,'cciSurvente':CCI_SURVENTE,'stochSurvente':STOCH_SURVENTE,'adxMin':ADX_MIN,
+    'poidsValue':POIDS_VALUE,'poidsGrowth':POIDS_GROWTH,'poidsDividende':POIDS_DIVIDENDE,'poidsTechnique':POIDS_TECHNIQUE,
     'scoreMin':SCORE_MIN,'psMax':4,'pfcfMax':30,'grahamMin':0,'crMin':1.0,'deMax':150,'fcfyMin':2,
     'willrSurvente':-60,'rocMin':5,
     'tPer':1,'tPbv':1,'tEv':1,'tPs':1,'tPfcf':1,'tGraham':1,
@@ -474,8 +474,8 @@ DATA_JSON = json.dumps(resultats, ensure_ascii=False, default=str)
 DATE_STR  = d_fin.strftime('%d/%m/%Y %H:%M')
 CFG_JSON  = json.dumps({
     'perMax':PER_MAX,'pbvMax':PBV_MAX,'roeMin':ROE_MIN,
-    'rsiSurvente':RSI_SV,'cciSurvente':CCI_SV,'stochSurvente':STOCH_SV,'adxMin':ADX_MIN,
-    'poidsValue':POIDS_V,'poidsGrowth':POIDS_G,'poidsDividende':POIDS_D,'poidsTechnique':POIDS_T,
+    'rsiSurvente':RSI_SURVENTE,'cciSurvente':CCI_SURVENTE,'stochSurvente':STOCH_SURVENTE,'adxMin':ADX_MIN,
+    'poidsValue':POIDS_VALUE,'poidsGrowth':POIDS_GROWTH,'poidsDividende':POIDS_DIVIDENDE,'poidsTechnique':POIDS_TECHNIQUE,
     'scoreMin':SCORE_MIN,'psMax':4,'pfcfMax':30,'grahamMin':0,'crMin':1.0,'deMax':150,'fcfyMin':2,
     'willrSurvente':-60,'rocMin':5,
     'tPer':1,'tPbv':1,'tEv':1,'tPs':1,'tPfcf':1,'tGraham':1,
