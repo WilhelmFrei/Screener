@@ -1065,11 +1065,7 @@ function loadPrefs(){
     if(p.theme==='light')document.body.classList.add('light');
     if(p.theme==='light')document.documentElement.classList.add('light');
     var msEl=document.getElementById('ms');if(msEl)msEl.value=CFG.scoreMin;
-    // Note: filtres (secteur, marche, recherche) non restaures intentionnellement
-    // Force reset des filtres independamment du localStorage
-    try{var se=document.getElementById('sect');if(se)se.value='all';}catch(e){}
-    try{var me=document.getElementById('mkt');if(me)me.value='all';}catch(e){}
-    try{var qe=document.getElementById('q');if(qe)qe.value='';}catch(e){}
+    // Note: filtres restaures ci-dessous via resetFilters() apres chargement DOM
   }catch(e){
     try{localStorage.removeItem(LS_KEY);}catch(e2){}
   }
@@ -2300,6 +2296,7 @@ function resetFilters(){
 }
 
 render();
+resetFilters();
 
 </script>
 
