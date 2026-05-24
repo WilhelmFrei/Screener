@@ -49,7 +49,7 @@ select,input[type=text],input[type=number]{background:#0d1520;border:1px solid #
 .tab.on{border-color:#00d4aa;background:#111827;color:#e2e8f0}
 .bdg{background:#1e2d45;color:#64748b;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px}
 .tab.on .bdg{background:#00d4aa;color:#000}
-.stats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;width:100%}
 .stat{background:#111827;border:1px solid #1e2d45;border-radius:9px;padding:8px 12px;flex:1;min-width:75px}
 .sl{font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
 .sv{font-family:monospace;font-size:17px;font-weight:900;margin-top:2px}
@@ -78,7 +78,7 @@ tbody tr:hover td{background:#152030!important}
 .tip{display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e2d45;border:1px solid #2a3f5f;border-radius:8px;padding:8px 10px;font-size:10px;color:#e2e8f0;white-space:normal;width:200px;z-index:20;line-height:1.5;font-family:system-ui;text-transform:none;letter-spacing:0;font-weight:400;text-align:left;pointer-events:none}
 .th-wrap:hover .tip{display:block}
 .tip-ico{font-size:8px;color:#2a4060;cursor:help}
-.card-list{display:none;flex-direction:column;gap:8px}
+.card-list{display:none;flex-direction:column;gap:8px;width:100%}
 .card{background:#111827;border:1px solid #1e2d45;border-radius:12px;padding:12px 14px}
 .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .card-tk{font-family:monospace;font-weight:900;color:#00d4aa;font-size:14px}
@@ -111,7 +111,7 @@ tbody tr:hover td{background:#152030!important}
 .col-item.pinned{border-color:#00d4aa44}
 .col-item input{accent-color:#00d4aa;cursor:pointer}
 .col-item label{font-size:10px;color:#94a3b8;cursor:pointer;font-family:monospace}
-.ssf{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.ssf{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;width:100%}
 .ssf-lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
 .ssf-item{display:flex;align-items:center;gap:4px;background:#0d1520;border:1px solid #1e2d45;border-radius:6px;padding:4px 8px}
 .ssf-item label{font-size:10px;color:#64748b;font-family:monospace}
@@ -259,17 +259,75 @@ body.light .opp-card{background:#fff;border-color:#e2e8f0}
 body.light .opp-rank{color:#e2e8f0}
 body.light .wl-alert{background:#fef3c720;border-color:#fcd34d}
 body.light .pdf-btn{background:#f1f5f9;color:#ec4899;border-color:#ec489944}
+
+/* Radar chart */
+.radar-svg{display:block;margin:0 auto}
+.radar-axis{stroke:#1e2d45;stroke-width:1}
+.radar-grid{stroke:#1e2d45;stroke-width:0.5;fill:none}
+.radar-area{fill:#00d4aa18;stroke:#00d4aa;stroke-width:1.5}
+.radar-dot{fill:#00d4aa;r:3}
+.radar-label{font-size:9px;fill:#64748b;font-family:monospace;text-anchor:middle}
+
+/* Delta score badge */
+.delta{font-family:monospace;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px}
+.delta-up{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.delta-dn{background:#ef444418;color:#ef4444;border:1px solid #ef444433}
+.delta-eq{background:#1e2d45;color:#64748b}
+
+/* Dashboard widget */
+.dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.dash-card{background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px}
+.dash-card-title{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.dash-top-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0d1520}
+.dash-top-item:last-child{border:none}
+
+/* Backtest */
+.bt-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #0d1520}
+.bt-row:last-child{border:none}
+.bt-pct{font-family:monospace;font-size:14px;font-weight:900}
+
+/* Theme picker */
+.theme-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.2s;display:inline-block;margin:3px}
+.theme-swatch.active{border-color:#fff;transform:scale(1.2)}
+
+/* Nouveaux entrants badge */
+.new-badge{font-size:8px;padding:1px 5px;border-radius:3px;background:#8b5cf618;color:#8b5cf6;border:1px solid #8b5cf633;margin-left:3px;font-family:monospace}
+
+/* Recherche avancée */
+.adv-search{display:none;background:#0d1520;border:1px solid #1e2d45;border-radius:8px;padding:10px;margin-top:6px;flex-wrap:wrap;gap:8px}
+.adv-search.open{display:flex}
+.adv-row{display:flex;align-items:center;gap:6px}
+.adv-lbl{font-size:10px;color:#64748b;white-space:nowrap}
+.adv-op{background:#111827;border:1px solid #1e2d45;color:#e2e8f0;font-size:11px;padding:4px 6px;border-radius:5px}
+.adv-val{width:55px;background:#111827;border:1px solid #1e2d45;color:#00d4aa;font-size:11px;padding:4px 6px;border-radius:5px;font-family:monospace}
+
+/* Section corrélation */
+.sector-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sector-name{font-size:10px;color:#94a3b8;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sector-track{flex:1;height:6px;background:#1e2d45;border-radius:3px;overflow:hidden}
+.sector-fill{height:100%;border-radius:3px;background:#00d4aa}
+.sector-count{font-size:10px;font-family:monospace;color:#64748b;width:20px;text-align:right}
+
+/* Light mode additions */
+body.light .dash-card{background:#f8fafc;border-color:#e2e8f0}
+body.light .adv-search{background:#f8fafc;border-color:#e2e8f0}
+body.light .adv-op,body.light .adv-val{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .bt-row{border-color:#e2e8f0}
+body.light .radar-axis,body.light .radar-grid{stroke:#e2e8f0}
+body.light .radar-label{fill:#94a3b8}
+body.light .dash-top-item{border-color:#e2e8f0}
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
 <div class="hsub">2000 actions scannees - Yahoo Finance - 01/01/2026 07:00</div></div>
 <div class="hbtns">
 <span style="font-family:monospace;font-size:10px;color:#64748b" id="nxt"></span>
-<button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Mode clair/sombre">&#9788;</button>
+<button class="theme-btn" onclick="openTheme()" id="theme-btn" title="Theme">&#127912;</button>
 <button class="hbtn hbtn-guide" onclick="openGuide()">&#128218; Guide</button>
 <button class="hbtn" onclick="openCols()" style="background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44">&#9638; Colonnes</button>
 <button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>
 <button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
+<button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
 <button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>
@@ -892,23 +950,35 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="tab" id="tab-div" onclick="setTab('div')">&#9888; Divergences <span class="bdg" id="b-div">0</span></div>
 <div class="tab" id="tab-opp" onclick="setTab('opp')">&#127919; Top 20 <span class="bdg" id="b-opp">20</span></div>
 <div class="tab" id="tab-wl" onclick="setTab('wl')">&#11088; WL <span class="bdg" id="b-wl">0</span></div>
+<div class="tab" id="tab-new" onclick="setTab('new')">&#127381; Nouveaux <span class="bdg" id="b-new">0</span></div>
+<div class="tab" id="tab-dash" onclick="setTab('dash')">&#128202; Dashboard <span class="bdg" id="b-dash" style="display:none"></span></div</div>
 <div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
 </div>
-<div class="ssf">
+<div style="display:block;width:100%;margin-bottom:6px"><button onclick="toggleAdvSearch()" style="background:#0d1520;border:1px solid #1e2d45;color:#64748b;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:monospace">&#128269; Recherche avancee</button></div>
+<div class="adv-search" id="adv-search">
+<div class="adv-row"><span class="adv-lbl">RSI</span><select class="adv-op" id="adv-rsi-op"><option value="lt">&lt;</option><option value="gt">&gt;</option></select><input type="number" class="adv-val" id="adv-rsi-val" placeholder="45"></div>
+<div class="adv-row"><span class="adv-lbl">Score V</span><select class="adv-op" id="adv-sv-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-sv-val" placeholder="50"></div>
+<div class="adv-row"><span class="adv-lbl">Div%</span><select class="adv-op" id="adv-div-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-div-val" placeholder="3"></div>
+<div class="adv-row"><span class="adv-lbl">Graham%</span><select class="adv-op" id="adv-gr-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-gr-val" placeholder="0"></div>
+<button onclick="applyAdvSearch()" style="background:#00d4aa;color:#000;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:700">Appliquer</button>
+<button onclick="clearAdvSearch()" style="background:#1e2d45;color:#64748b;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px">Reset</button>
+</div>
+<div style="display:block;width:100%"><div class="ssf">
 <span class="ssf-lbl">Filtres scores:</span>
 <div class="ssf-item"><label>Value&ge;</label><input type="number" id="f-sv" value="0" min="0" max="100" step="5" onchange="render()"></div>
 <div class="ssf-item"><label>Growth&ge;</label><input type="number" id="f-sg" value="0" min="0" max="100" step="5" onchange="render()"></div>
 <div class="ssf-item"><label>Div&ge;</label><input type="number" id="f-sd" value="0" min="0" max="100" step="5" onchange="render()"></div>
 <div class="ssf-item"><label>Tech&ge;</label><input type="number" id="f-st" value="0" min="0" max="100" step="5" onchange="render()"></div>
 <div class="ssf-item"><label>Mom&ge;</label><input type="number" id="f-smom" value="0" min="0" max="100" step="5" onchange="render()"></div>
-</div>
+</div></div>
 <div class="wl-alert" id="wl-alert"></div>
 <div class="stale-banner" id="stale-banner">&#9888; Donnees potentiellement perimees — dernier scan: 01/01/2026 07:00. Weekend ou jour ferie ?</div>
 <div class="stats" id="stats"></div>
-<div class="tw"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+<div class="tw" style="display:block;width:100%"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
 <div class="empty" id="empty" style="display:none">Aucun resultat</div></div></div>
 <div class="card-list" id="card-list"></div>
 <div id="card-list-opp" style="display:none;padding:0 4px"></div>
+<div id="dash-view" style="display:none;padding:4px"></div>
 <div class="disc">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
 </div>
 <div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">
@@ -1303,11 +1373,17 @@ function renderCard(r){
   var tgs='';if(r.pea)tgs+='<span class="ptag">PEA</span>';if(r._imported)tgs+='<span class="imptag">IMP</span>';
   if(r.divergence){var dc=r.divergence==='FOND+'?'div-fond':'div-tech';tgs+='<span class="div-badge '+dc+'" style="margin-left:3px">'+r.divergence+'</span>';}
   var cmpOn=CMP_SET[r.ticker]?'on':'';
+  var wlOn2=WATCHLIST[r.ticker]?'on':'';
+  var delta2=deltaBadge(r);
+  var newBadge=isNew(r)?'<span class="new-badge">NEW</span>':'';
   var kv=function(k,v){return '<div class="card-kv"><div class="card-k">'+k+'</div><div class="card-v" style="color:#94a3b8">'+v+'</div></div>';};
   return '<div class="card">'
     +'<div class="card-top"><div>'
       +'<span class="card-tk" onclick="openYahoo(this.dataset.tk)" data-tk="'+ r.ticker +'" style="cursor:pointer">'+r.ticker+'</span>'
-      +'<button class="cmp-btn '+cmpOn+'" data-tk="'+ r.ticker +'" style="margin-left:6px">&#9878;</button>'
+      +newBadge+delta2
+      +'<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+ r.ticker +'" style="margin-left:4px">&#9878;</button>'
+      +'<button class="star-btn '+wlOn2+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+ r.ticker +'" style="font-size:15px;padding:0 2px">&#11088;</button>'
+      +'<button onclick="openRadar(this.dataset.tk)" data-tk="'+ r.ticker +'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button>'
     +'</div>'
     +'<div style="text-align:right"><span class="card-score" style="color:'+c+'">'+sc+'</span>'
       +(mom>=50?'<div style="font-size:9px;color:#3b82f6;font-family:monospace">Mom:'+mom+'</div>':'')
@@ -1799,6 +1875,385 @@ function scoreHistSVG(hist){
     +'<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>'
     +'</svg>';
 }
+
+// ══ THEME PERSONNALISABLE ══
+var ACCENT_COLORS=[
+  {name:'Vert',hex:'#00d4aa',dark:'#00a87f'},
+  {name:'Bleu',hex:'#3b82f6',dark:'#2563eb'},
+  {name:'Violet',hex:'#8b5cf6',dark:'#7c3aed'},
+  {name:'Rose',hex:'#ec4899',dark:'#db2777'},
+  {name:'Orange',hex:'#f59e0b',dark:'#d97706'},
+  {name:'Rouge',hex:'#ef4444',dark:'#dc2626'},
+];
+var CURRENT_ACCENT='#00d4aa';
+
+function applyAccent(hex,dark){
+  CURRENT_ACCENT=hex;
+  var root=document.documentElement;
+  // Update CSS variables via inline style injections
+  var style=document.getElementById('accent-style');
+  if(!style){style=document.createElement('style');style.id='accent-style';document.head.appendChild(style);}
+  style.textContent=
+    '.htitle{color:'+hex+'!important}'+
+    '.tk{color:'+hex+'!important}'+
+    '.tab.on{border-color:'+hex+'!important}'+
+    '.mbtn.on{border-color:'+hex+'!important}'+
+    '.hbtn-scan{background:linear-gradient(135deg,'+hex+','+dark+')!important}'+
+    '.bdg.on,.tab.on .bdg{background:'+hex+'!important}'+
+    '.login-logo{color:'+hex+'!important}'+
+    '.login-btn{background:linear-gradient(135deg,'+hex+','+dark+')!important}'+
+    '.guide-title{color:'+hex+'!important}'+
+    '.opp-tk{color:'+hex+'!important}'+
+    'input:focus,select:focus{border-color:'+hex+'44!important}'+
+    '.tog input:checked+.tog-sl{background:'+hex+'22!important;border-color:'+hex+'55!important}'+
+    '.tog input:checked+.tog-sl:before{background:'+hex+'!important}';
+  try{localStorage.setItem('screener_accent',JSON.stringify({hex:hex,dark:dark}));}catch(e){}
+}
+function loadAccent(){
+  try{
+    var a=JSON.parse(localStorage.getItem('screener_accent'));
+    if(a&&a.hex)applyAccent(a.hex,a.dark);
+  }catch(e){}
+}
+loadAccent();
+
+function openTheme(){
+  var el=document.getElementById('theme-swatches');
+  if(!el)return;
+  el.innerHTML='';
+  ACCENT_COLORS.forEach(function(c){
+    var sw=document.createElement('span');
+    sw.className='theme-swatch'+(CURRENT_ACCENT===c.hex?' active':'');
+    sw.style.background=c.hex;
+    sw.title=c.name;
+    sw.onclick=function(){
+      applyAccent(c.hex,c.dark);
+      document.querySelectorAll('.theme-swatch').forEach(function(s){s.classList.remove('active');});
+      sw.classList.add('active');
+    };
+    el.appendChild(sw);
+  });
+  document.getElementById('modal-theme').className='modal-bg open';
+}
+
+// ══ DELTA SCORE (variation vs scan precedent) ══
+function getDelta(r){
+  if(!r.score_history||r.score_history.length<2)return null;
+  var prev=r.score_history[r.score_history.length-2];
+  var curr=getScore(r);
+  return curr-prev;
+}
+function deltaBadge(r){
+  var d=getDelta(r);
+  if(d===null)return '';
+  if(d>0)return '<span class="delta delta-up">+'+d+'</span>';
+  if(d<0)return '<span class="delta delta-dn">'+d+'</span>';
+  return '<span class="delta delta-eq">=</span>';
+}
+
+// ══ NOUVEAUX ENTRANTS ══
+var PREV_TICKERS={};
+function loadPrevTickers(){
+  try{
+    var raw=localStorage.getItem('screener_prev_tickers');
+    if(raw)PREV_TICKERS=JSON.parse(raw);
+  }catch(e){}
+}
+function savePrevTickers(){
+  try{
+    var current={};
+    RAW_ORIG.forEach(function(r){current[r.ticker]=1;});
+    localStorage.setItem('screener_prev_tickers',JSON.stringify(current));
+  }catch(e){}
+}
+loadPrevTickers();
+function isNew(r){
+  return Object.keys(PREV_TICKERS).length>0 && !PREV_TICKERS[r.ticker];
+}
+// Save current as prev after 5s (so first load shows diff)
+setTimeout(savePrevTickers, 5000);
+
+function getNewEntrants(){
+  return RAW_ORIG.filter(function(r){return isNew(r);});
+}
+
+// ══ RADAR CHART ══
+function openRadar(ticker){
+  var rows=RAW_ORIG.filter(function(r){return r.ticker===ticker;});
+  if(!rows.length)return;
+  var r=rows[0];
+  document.getElementById('radar-title').textContent='Profil — '+r.ticker+' / '+r.nom;
+
+  var dims=[
+    {label:'Value',val:lsv(r)},
+    {label:'Growth',val:lsg(r)},
+    {label:'Divid.',val:lsd(r)},
+    {label:'Tech',val:lst(r)},
+    {label:'Moment.',val:lsmom(r)},
+  ];
+
+  var cx=140,cy=140,R=90,n=dims.length;
+  var svg='';
+  // Grid circles
+  [25,50,75,100].forEach(function(pct){
+    var rr=R*pct/100;
+    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rr+'" class="radar-grid"/>';
+  });
+  // Axes + labels
+  dims.forEach(function(d,i){
+    var angle=(i/n)*2*Math.PI-Math.PI/2;
+    var x=cx+R*Math.cos(angle);
+    var y=cy+R*Math.sin(angle);
+    var lx=cx+(R+18)*Math.cos(angle);
+    var ly=cy+(R+18)*Math.sin(angle);
+    svg+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" class="radar-axis"/>';
+    svg+='<text x="'+lx+'" y="'+(ly+4)+'" class="radar-label">'+d.label+'</text>';
+  });
+  // Area
+  var pts=dims.map(function(d,i){
+    var angle=(i/n)*2*Math.PI-Math.PI/2;
+    var r2=R*d.val/100;
+    return [cx+r2*Math.cos(angle), cy+r2*Math.sin(angle)];
+  });
+  var path=pts.map(function(p,i){return (i===0?'M':'L')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ')+'Z';
+  svg+='<path d="'+path+'" class="radar-area"/>';
+  pts.forEach(function(p){svg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+CURRENT_ACCENT+'"/>';});
+  // Score global
+  svg+='<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-family="monospace" font-size="18" font-weight="900" fill="'+CURRENT_ACCENT+'">'+getScore(r)+'</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+17)+'" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">SCORE</text>';
+
+  document.getElementById('radar-svg').innerHTML=svg;
+
+  // Scores detail
+  var sc='';
+  dims.forEach(function(d){
+    var c=d.val>=70?'#10b981':d.val>=50?'#f59e0b':'#64748b';
+    sc+='<div style="background:#0d1520;border-radius:6px;padding:6px 8px"><div style="font-size:8px;color:#64748b">'+d.label+'</div><div style="font-family:monospace;font-size:16px;font-weight:900;color:'+c+'">'+d.val+'</div></div>';
+  });
+  document.getElementById('radar-scores').innerHTML=sc;
+
+  // Delta
+  var d2=getDelta(r);
+  var dEl=document.getElementById('radar-delta');
+  if(d2!==null){
+    var dc=d2>0?'#10b981':d2<0?'#ef4444':'#64748b';
+    dEl.innerHTML='Evolution vs scan precedent: <span style="font-family:monospace;font-weight:700;color:'+dc+'">'+(d2>0?'+':'')+d2+'pts</span>';
+  } else {
+    dEl.innerHTML='';
+  }
+  document.getElementById('modal-radar').className='modal-bg open';
+}
+
+// ══ RECHERCHE AVANCEE ══
+var ADV_FILTERS={};
+function toggleAdvSearch(){
+  var el=document.getElementById('adv-search');
+  if(el)el.classList.toggle('open');
+}
+function applyAdvSearch(){
+  ADV_FILTERS={};
+  var fields=[
+    {id:'rsi',key:'rsi'},
+    {id:'sv',key:'_sv'},
+    {id:'div',key:'div'},
+    {id:'gr',key:'graham'},
+  ];
+  fields.forEach(function(f){
+    var op=document.getElementById('adv-'+f.id+'-op');
+    var val=document.getElementById('adv-'+f.id+'-val');
+    if(op&&val&&val.value!==''){
+      ADV_FILTERS[f.key]={op:op.value,val:parseFloat(val.value)};
+    }
+  });
+  render();
+}
+function clearAdvSearch(){
+  ADV_FILTERS={};
+  ['rsi','sv','div','gr'].forEach(function(id){
+    var el=document.getElementById('adv-'+id+'-val');
+    if(el)el.value='';
+  });
+  render();
+}
+function passesAdvFilter(r){
+  for(var key in ADV_FILTERS){
+    var f=ADV_FILTERS[key];
+    var v=key==='_sv'?lsv(r):r[key];
+    if(v===null||v===undefined)return false;
+    if(f.op==='lt'&&parseFloat(v)>=f.val)return false;
+    if(f.op==='gt'&&parseFloat(v)<=f.val)return false;
+  }
+  return true;
+}
+
+// ══ BACKTEST WATCHLIST ══
+function openBacktest(){
+  var wlKeys=Object.keys(WATCHLIST);
+  if(!wlKeys.length){
+    alert('Ajoutez des actions a votre watchlist d\'abord.');
+    return;
+  }
+  var rows=wlKeys.map(function(tk){
+    var r=RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
+    if(!r)return null;
+    var addedScore=WATCHLIST[tk];
+    var currScore=getScore(r);
+    var delta=currScore-addedScore;
+    return {ticker:tk,nom:r.nom,addedScore:addedScore,currScore:currScore,delta:delta,r:r};
+  }).filter(Boolean);
+  rows.sort(function(a,b){return b.delta-a.delta;});
+
+  var html='';
+  rows.forEach(function(row){
+    var c=row.delta>0?'#10b981':row.delta<0?'#ef4444':'#64748b';
+    var bar=Math.min(Math.abs(row.delta)*2,100);
+    html+='<div class="bt-row">';
+    html+='<div><div style="font-family:monospace;font-size:13px;font-weight:900;color:'+CURRENT_ACCENT+'">'+row.ticker+'</div>';
+    html+='<div style="font-size:10px;color:#64748b">'+row.nom+'</div>';
+    html+='<div style="font-size:9px;color:#64748b;margin-top:3px">'+row.addedScore+' → '+row.currScore+'</div></div>';
+    html+='<div style="text-align:right">';
+    html+='<div class="bt-pct" style="color:'+c+'">'+(row.delta>0?'+':'')+row.delta+'pts</div>';
+    html+='<div style="width:60px;height:4px;background:#1e2d45;border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:'+c+';border-radius:2px"></div></div>';
+    html+='</div></div>';
+  });
+
+  document.getElementById('bt-content').innerHTML=html||'<div style="color:#64748b;font-size:12px">Aucune donnee</div>';
+  document.getElementById('modal-bt').className='modal-bg open';
+}
+
+// ══ DASHBOARD ══
+function renderDashboard(){
+  var top5=renderTopOpportunites().slice(0,5);
+  var wlKeys=Object.keys(WATCHLIST);
+  var totalScan=RAW_ORIG.length;
+  var score70=RAW_ORIG.filter(function(r){return getScore(r)>=70;}).length;
+  var divMoy=0,ndiv=0;
+  RAW_ORIG.forEach(function(r){if(r.div){divMoy+=r.div;ndiv++;}});
+  divMoy=ndiv?( divMoy/ndiv).toFixed(1)+'%':'N/A';
+  var rsiLow=RAW_ORIG.filter(function(r){return r.rsi&&r.rsi<=45;}).length;
+
+  // Sector distribution of top 20
+  var sectorCount={};
+  renderTopOpportunites().forEach(function(r){
+    sectorCount[r.secteur]=(sectorCount[r.secteur]||0)+1;
+  });
+  var sectorsSorted=Object.keys(sectorCount).sort(function(a,b){return sectorCount[b]-sectorCount[a];}).slice(0,5);
+  var maxSec=sectorCount[sectorsSorted[0]]||1;
+
+  var sectorBars='';
+  sectorsSorted.forEach(function(s){
+    var pct=Math.round(sectorCount[s]/maxSec*100);
+    sectorBars+='<div class="sector-bar"><span class="sector-name">'+s+'</span><div class="sector-track"><div class="sector-fill" style="width:'+pct+'%"></div></div><span class="sector-count">'+sectorCount[s]+'</span></div>';
+  });
+
+  var top5html='';
+  top5.forEach(function(r,i){
+    var sc=getScore(r);
+    var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
+    top5html+='<div class="dash-top-item"><span style="font-family:monospace;font-size:12px;font-weight:700;color:'+CURRENT_ACCENT+'">'+(i+1)+'. '+r.ticker+'</span><span style="font-family:monospace;font-size:13px;font-weight:900;color:'+c+'">'+sc+'</span></div>';
+  });
+
+  var html=
+    '<div class="dash-grid">'+
+    '<div class="dash-card"><div class="dash-card-title">Scan</div>'+
+    '<div style="font-family:monospace;font-size:24px;font-weight:900;color:'+CURRENT_ACCENT+'">'+totalScan+'</div>'+
+    '<div style="font-size:10px;color:#64748b">actions analysees</div>'+
+    '<div style="margin-top:8px;font-family:monospace;font-size:18px;font-weight:700;color:#10b981">'+score70+'</div>'+
+    '<div style="font-size:10px;color:#64748b">score 70+</div></div>'+
+
+    '<div class="dash-card"><div class="dash-card-title">Marche</div>'+
+    '<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. moy.</div>'+
+    '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#8b5cf6">'+divMoy+'</div>'+
+    '<div style="font-size:10px;color:#64748b;margin-top:6px;margin-bottom:2px">RSI survente</div>'+
+    '<div style="font-family:monospace;font-size:18px;font-weight:700;color:#3b82f6">'+rsiLow+'</div></div>'+
+
+    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Top 5 Opportunites</div>'+top5html+'</div>'+
+
+    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Repartition sectorielle Top 20</div>'+sectorBars+'</div>'+
+    '</div>'+
+
+    '<div style="font-size:10px;color:#64748b;text-align:center;padding:8px">'+
+    'Watchlist: '+wlKeys.length+' action(s) | Scan: '+SCAN_DATE+'</div>';
+
+  document.getElementById('dash-view').innerHTML=html;
+}
+
+// ══ PATCH setTab pour nouveaux onglets ══
+var _origSetTab2=setTab;
+setTab=function(t){
+  _origSetTab2(t);
+  var dashEl=document.getElementById('dash-view');
+  var twEl=document.querySelector('.tw');
+  var clEl=document.getElementById('card-list');
+  var oppEl=document.getElementById('card-list-opp');
+
+  // Update new tab UI
+  ['new','dash'].forEach(function(x){
+    var el=document.getElementById('tab-'+x);
+    if(el)el.className='tab'+(t===x?' on':'');
+  });
+
+  if(t==='dash'){
+    if(dashEl){dashEl.style.display='block';renderDashboard();}
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+    if(oppEl)oppEl.style.display='none';
+  } else {
+    if(dashEl)dashEl.style.display='none';
+    // oppEl handled by previous patch
+  }
+  // Update new entrants badge
+  var ne=getNewEntrants();
+  var nel=document.getElementById('b-new');
+  if(nel)nel.textContent=ne.length;
+};
+
+// ══ PATCH doFilter pour nouveaux entrants + adv search ══
+var _origDoFilter2=doFilter;
+doFilter=function(){
+  var data;
+  if(curTab==='new'){
+    data=getNewEntrants();
+  } else {
+    data=_origDoFilter2();
+  }
+  // Apply advanced filters
+  if(Object.keys(ADV_FILTERS).length>0){
+    data=data.filter(passesAdvFilter);
+  }
+  return data;
+};
+
+// ══ PATCH cH pour delta + radar + nouveaux ══
+var _origCH2=cH;
+cH=function(col,r){
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea)tg+='<span class="ptag">PEA</span>';
+    if(r._imported)tg+='<span class="imptag">IMP</span>';
+    if(isNew(r))tg+='<span class="new-badge">NEW</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    var tk=r.ticker;
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+tk+'">'+tk+'</span>'
+      +tg+deltaBadge(r)
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+tk+'">&#9878;</button>'
+      +'<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+tk+'" title="Watchlist">&#11088;</button>'
+      +'<button onclick="openRadar(this.dataset.tk)" data-tk="'+tk+'" style="font-size:10px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px" title="Profil radar">&#127919;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  return _origCH2(col,r);
+};
+
+// Init new badges
+setTimeout(function(){
+  var ne=getNewEntrants();
+  var nel=document.getElementById('b-new');
+  if(nel)nel.textContent=ne.length;
+},200);
 
 render();
 
