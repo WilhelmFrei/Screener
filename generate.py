@@ -465,6 +465,38 @@ out.parent.mkdir(exist_ok=True)
 out.write_text(html, encoding='utf-8')
 print('HTML OK: ' + str(out))
 
+
+# ══ HISTORIQUE DES SCORES ══
+import datetime as _dt
+hist_dir = Path('docs/history')
+hist_dir.mkdir(exist_ok=True)
+today_str = _dt.date.today().isoformat()
+# Save today's snapshot (ticker -> score)
+snapshot = {r['ticker']: r['score'] for r in resultats}
+(hist_dir / (today_str + '.json')).write_text(
+    json.dumps(snapshot, ensure_ascii=False), encoding='utf-8')
+# Keep only last 30 days
+hist_files = sorted(hist_dir.glob('*.json'))
+for old in hist_files[:-30]:
+    old.unlink()
+# Build score history for each ticker (last 30 days)
+score_history = {}
+for hf in sorted(hist_dir.glob('*.json'))[-30:]:
+    day = hf.stem
+    try:
+        data = json.loads(hf.read_text(encoding='utf-8'))
+        for tk, sc in data.items():
+            if tk not in score_history:
+                score_history[tk] = {}
+            score_history[tk][day] = sc
+    except Exception:
+        pass
+# Inject score_history into each result
+for r in resultats:
+    hist = score_history.get(r['ticker'], {})
+    r['score_history'] = [hist[d] for d in sorted(hist.keys())]
+print('Historique: ' + str(len(score_history)) + ' tickers sur ' + str(len(list(hist_dir.glob('*.json')))) + ' jours')
+
 # ══ GENERATION HTML depuis template ══
 import hashlib, os
 raw_pwd = os.environ.get('SCREENER_PASSWORD', 'changeme2025')

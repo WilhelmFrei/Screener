@@ -227,6 +227,38 @@ body.light .hbtn-scan{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#
 body.light .hbtn-guide{background:#f1f5f9;color:#8b5cf6;border:1px solid #8b5cf644}
 body.light .hbtn-cfg{background:#f1f5f9;color:#00d4aa;border:1px solid #00d4aa44}
 body.light .hbtn-imp{background:#f1f5f9;color:#f59e0b;border:1px solid #f59e0b44}
+
+/* Watchlist */
+.star-btn{font-size:12px;background:none;border:none;cursor:pointer;padding:0 3px;opacity:.4;transition:opacity .2s}
+.star-btn.on{opacity:1;color:#f59e0b}
+/* Feu tricolore */
+.feu{display:inline-flex;gap:3px;align-items:center;vertical-align:middle}
+.feu-dot{width:8px;height:8px;border-radius:50%;background:#1e2d45}
+.feu-dot.on-g{background:#10b981}
+.feu-dot.on-y{background:#f59e0b}
+.feu-dot.on-r{background:#ef4444}
+/* Top opportunités */
+.opp-card{background:#111827;border:1px solid #1e2d45;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:border-color .2s}
+.opp-card:hover{border-color:#00d4aa44}
+.opp-rank{font-family:monospace;font-size:22px;font-weight:900;color:#1e2d45;min-width:32px}
+.opp-tk{font-family:monospace;font-size:14px;font-weight:900;color:#00d4aa}
+.opp-nom{font-size:10px;color:#64748b;margin-top:2px}
+.opp-scores{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.opp-s{font-size:9px;padding:2px 7px;border-radius:20px;font-family:monospace;font-weight:700}
+.opp-s-g{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.opp-s-y{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+.opp-s-r{background:#ef444418;color:#ef4444;border:1px solid #ef444433}
+/* Alerte watchlist */
+.wl-alert{background:#f59e0b12;border:1px solid #f59e0b33;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#f59e0b;display:none}
+/* Score history sparkline */
+.hist-spark{display:inline-block;vertical-align:middle;margin-left:4px}
+/* PDF button */
+.pdf-btn{font-size:11px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;background:#1e2d45;color:#ec4899;border:1px solid #ec489944}
+/* Light mode additions */
+body.light .opp-card{background:#fff;border-color:#e2e8f0}
+body.light .opp-rank{color:#e2e8f0}
+body.light .wl-alert{background:#fef3c720;border-color:#fcd34d}
+body.light .pdf-btn{background:#f1f5f9;color:#ec4899;border-color:#ec489944}
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -237,6 +269,8 @@ body.light .hbtn-imp{background:#f1f5f9;color:#f59e0b;border:1px solid #f59e0b44
 <button class="hbtn hbtn-guide" onclick="openGuide()">&#128218; Guide</button>
 <button class="hbtn" onclick="openCols()" style="background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44">&#9638; Colonnes</button>
 <button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>
+<button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
+<button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
 <button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>
 <button class="hbtn hbtn-imp" onclick="openImp()">&#128229; Tickers</button>
@@ -856,6 +890,8 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="tab on" id="tab-all" onclick="setTab('all')">Toutes <span class="bdg" id="b-all">0</span></div>
 <div class="tab" id="tab-pea" onclick="setTab('pea')">PEA <span class="bdg" id="b-pea">0</span></div>
 <div class="tab" id="tab-div" onclick="setTab('div')">&#9888; Divergences <span class="bdg" id="b-div">0</span></div>
+<div class="tab" id="tab-opp" onclick="setTab('opp')">&#127919; Top Opport. <span class="bdg" id="b-opp">20</span></div>
+<div class="tab" id="tab-wl" onclick="setTab('wl')">&#11088; Watchlist <span class="bdg" id="b-wl">0</span></div>
 <div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
 </div>
 <div class="ssf">
@@ -866,11 +902,13 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="ssf-item"><label>Tech&ge;</label><input type="number" id="f-st" value="0" min="0" max="100" step="5" onchange="render()"></div>
 <div class="ssf-item"><label>Mom&ge;</label><input type="number" id="f-smom" value="0" min="0" max="100" step="5" onchange="render()"></div>
 </div>
+<div class="wl-alert" id="wl-alert"></div>
 <div class="stale-banner" id="stale-banner">&#9888; Donnees potentiellement perimees — dernier scan: 01/01/2026 07:00. Weekend ou jour ferie ?</div>
 <div class="stats" id="stats"></div>
 <div class="tw"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
 <div class="empty" id="empty" style="display:none">Aucun resultat</div></div></div>
 <div class="card-list" id="card-list"></div>
+<div id="card-list-opp" style="display:none;padding:0 4px"></div>
 <div class="disc">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
 </div>
 <div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">
@@ -1488,6 +1526,279 @@ function triggerScan(){
 
 // LOGIN SHA-256 gere dans le script isole ci-dessus
 var PWD_HASH='__PWD_HASH__'; // reference uniquement
+
+// ══ WATCHLIST (localStorage) ══
+var WL_KEY='screener_watchlist_v1';
+var WATCHLIST={};
+function loadWatchlist(){
+  try{var r=localStorage.getItem(WL_KEY);if(r)WATCHLIST=JSON.parse(r);}catch(e){}
+}
+function saveWatchlist(){
+  try{localStorage.setItem(WL_KEY,JSON.stringify(WATCHLIST));}catch(e){}
+}
+loadWatchlist();
+
+function toggleStar(tk,btn){
+  if(WATCHLIST[tk]){
+    delete WATCHLIST[tk];
+    btn.classList.remove('on');
+  } else {
+    WATCHLIST[tk]=getScore(RAW_ORIG.filter(function(r){return r.ticker===tk;})[0]||{score:0});
+    btn.classList.add('on');
+  }
+  saveWatchlist();
+  updateWatchlistBadge();
+  checkWatchlistAlerts();
+}
+function updateWatchlistBadge(){
+  var el=document.getElementById('b-wl');
+  if(el)el.textContent=Object.keys(WATCHLIST).length;
+}
+function checkWatchlistAlerts(){
+  var alerts=[],tk,r,prev,curr;
+  for(tk in WATCHLIST){
+    var rows=RAW_ORIG.filter(function(r){return r.ticker===tk;});
+    if(!rows.length)continue;
+    r=rows[0]; curr=getScore(r); prev=WATCHLIST[tk];
+    if(curr-prev>=5) alerts.push(r.ticker+' +'+( curr-prev)+'pts ('+prev+' → '+curr+')');
+    WATCHLIST[tk]=curr;
+  }
+  saveWatchlist();
+  var el=document.getElementById('wl-alert');
+  if(el){
+    if(alerts.length){el.textContent='&#11088; Progression watchlist: '+alerts.join(' | ');el.style.display='block';}
+    else el.style.display='none';
+  }
+}
+updateWatchlistBadge();
+setTimeout(checkWatchlistAlerts,500);
+
+// ══ URL PARAMS (partage de filtres) ══
+function filtersToURL(){
+  var p=new URLSearchParams();
+  var q=document.getElementById('q').value;
+  var mkt=document.getElementById('mkt').value;
+  var sect=document.getElementById('sect').value;
+  var ms=document.getElementById('ms').value;
+  var pea=document.getElementById('peaOnly').value;
+  if(q)p.set('q',q);
+  if(mkt!=='all')p.set('mkt',mkt);
+  if(sect!=='all')p.set('sect',sect);
+  if(ms!=='35')p.set('ms',ms);
+  if(pea==='1')p.set('pea','1');
+  if(curTab!=='all')p.set('tab',curTab);
+  if(mode!=='combine')p.set('mode',mode);
+  var url=window.location.pathname+'?'+p.toString();
+  navigator.clipboard.writeText(window.location.origin+url).then(function(){
+    alert('Lien copie dans le presse-papier !');
+  }).catch(function(){
+    prompt('Copiez ce lien:',window.location.origin+url);
+  });
+}
+function loadURLParams(){
+  try{
+    var p=new URLSearchParams(window.location.search);
+    if(p.get('q'))document.getElementById('q').value=p.get('q');
+    if(p.get('mkt'))document.getElementById('mkt').value=p.get('mkt');
+    if(p.get('ms'))document.getElementById('ms').value=p.get('ms');
+    if(p.get('pea'))document.getElementById('peaOnly').value=p.get('pea');
+    if(p.get('sect')){
+      var se=document.getElementById('sect');
+      var op=Array.from(se.options).find(function(o){return o.value===p.get('sect');});
+      if(op)se.value=p.get('sect');
+    }
+    if(p.get('mode'))setMode(p.get('mode'));
+    if(p.get('tab'))setTab(p.get('tab'));
+  }catch(e){}
+}
+setTimeout(loadURLParams,100);
+
+// ══ FEU TRICOLORE CONSENSUS ══
+function feuTricolore(r){
+  // Compte signaux haussiers techniques
+  var pos=0,neg=0,n=0;
+  if(r.rsi!==null){n++;if(r.rsi<=45)pos++;else if(r.rsi>=70)neg++;}
+  if(r.macd!==null){n++;if(r.macd>0)pos++;else neg++;}
+  if(r.cci!==null){n++;if(r.cci<-100||( r.cci>50&&r.cci<150))pos++;else if(r.cci>200)neg++;}
+  if(r.stoch!==null){n++;if(r.stoch<=30)pos++;else if(r.stoch>=70)neg++;}
+  if(r.mm200!==null){n++;if(r.mm200>0)pos++;else neg++;}
+  if(r.willr!==null){n++;if(r.willr<=-60)pos++;else if(r.willr>=-20)neg++;}
+  if(n===0)return '<span style="color:#2a3a52">-</span>';
+  var ratio=pos/n;
+  var dots='<span class="feu">';
+  dots+='<span class="feu-dot '+(ratio>=0.6?'on-g':'')+'"></span>';
+  dots+='<span class="feu-dot '+(ratio>=0.4&&ratio<0.6?'on-y':ratio<0.4&&ratio>=0.2?'on-y':'')+'"></span>';
+  dots+='<span class="feu-dot '+(ratio<0.35?'on-r':'')+'"></span>';
+  dots+='</span>';
+  var label=ratio>=0.6?'<span style="font-size:9px;color:#10b981;font-family:monospace;font-weight:700"> Haussier</span>':ratio<0.35?'<span style="font-size:9px;color:#ef4444;font-family:monospace;font-weight:700"> Baissier</span>':'<span style="font-size:9px;color:#f59e0b;font-family:monospace;font-weight:700"> Neutre</span>';
+  return dots+' '+label;
+}
+
+// ══ TOP OPPORTUNITES ══
+function renderTopOpportunites(){
+  // Filtre: score élevé + divergence FOND+ OU RSI bas OU momentum fort
+  var candidates=RAW_ORIG.filter(function(r){
+    return getScore(r)>=50;
+  });
+  // Score composite: pondère fond+, rsi bas, momentum
+  candidates.sort(function(a,b){
+    var sa=getScore(a)*1.0 + (a.divergence==='FOND+'?15:0) + (a.rsi&&a.rsi<=40?10:0) + (lsmom(a)>60?8:0);
+    var sb=getScore(b)*1.0 + (b.divergence==='FOND+'?15:0) + (b.rsi&&b.rsi<=40?10:0) + (lsmom(b)>60?8:0);
+    return sb-sa;
+  });
+  var top=candidates.slice(0,20);
+  var el=document.getElementById('b-opp');if(el)el.textContent=top.length;
+  return top;
+}
+
+function renderOppCards(data){
+  var html='';
+  for(var i=0;i<data.length;i++){
+    var r=data[i],sc=getScore(r),mom=lsmom(r);
+    var sc_c=sc>=70?'opp-s-g':sc>=50?'opp-s-y':'opp-s-r';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    html+='<div class="opp-card">';
+    html+='<div class="opp-rank">'+(i+1)+'</div>';
+    html+='<div style="flex:1">';
+    html+='<div style="display:flex;align-items:center;gap:6px">';
+    html+='<span class="opp-tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+r.ticker+'">'+r.ticker+'</span>';
+    html+='<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+r.ticker+'">&#11088;</button>';
+    if(r.divergence)html+='<span class="div-badge '+(r.divergence==='FOND+'?'div-fond':'div-tech')+'">'+r.divergence+'</span>';
+    html+='</div>';
+    html+='<div class="opp-nom">'+r.nom+'</div>';
+    html+='<div class="opp-scores">';
+    html+='<span class="opp-s '+sc_c+'">Score '+sc+'</span>';
+    if(mom>=50)html+='<span class="opp-s opp-s-g">Mom '+mom+'</span>';
+    if(r.rsi&&r.rsi<=45)html+='<span class="opp-s opp-s-g">RSI '+r.rsi+'</span>';
+    if(r.div&&r.div>=3)html+='<span class="opp-s opp-s-y">Div '+parseFloat(r.div).toFixed(1)+'%</span>';
+    if(r.graham&&r.graham>=0)html+='<span class="opp-s opp-s-g">Graham +'+r.graham.toFixed(0)+'%</span>';
+    html+='</div>';
+    html+='<div style="margin-top:4px">'+feuTricolore(r)+'</div>';
+    html+='</div>';
+    html+='<div>'+sparkSVG(r.sparkline)+'</div>';
+    html+='</div>';
+  }
+  return html;
+}
+
+// ══ EXPORT PDF ══
+function exportPDF(){
+  var top=renderTopOpportunites();
+  var date=SCAN_DATE;
+  var rows='';
+  for(var i=0;i<top.length;i++){
+    var r=top[i];
+    rows+='<tr style="border-bottom:1px solid #e2e8f0">'
+      +'<td style="padding:6px 4px;font-weight:700">'+(i+1)+'</td>'
+      +'<td style="padding:6px 4px;font-family:monospace;color:#0284c7;font-weight:700">'+r.ticker+'</td>'
+      +'<td style="padding:6px 4px;font-size:11px">'+r.nom+'</td>'
+      +'<td style="padding:6px 4px;text-align:center;font-weight:700">'+getScore(r)+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.per?parseFloat(r.per).toFixed(1)+'x':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.roe?r.roe+'%':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.div?parseFloat(r.div).toFixed(1)+'%':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.rsi||'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.divergence||'-')+'</td>'
+      +'<td style="padding:6px 4px;font-size:10px;color:#64748b">'+r.secteur+'</td>'
+      +'</tr>';
+  }
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Screener Top 20 '+date+'</title>'
+    +'<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#1e293b;padding:20px}'
+    +'h1{font-size:18px;color:#0284c7;margin-bottom:4px}'
+    +'h2{font-size:11px;color:#64748b;margin-bottom:16px;font-weight:400}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'th{background:#f1f5f9;padding:6px 4px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b}'
+    +'@media print{@page{margin:1cm}}'
+    +'</style></head><body>'
+    +'<h1>Stock Screener - Top 20</h1>'
+    +'<h2>Scan du '+date+' - '+RAW_ORIG.length+' actions analysees</h2>'
+    +'<table><thead><tr>'
+    +'<th>#</th><th>Ticker</th><th>Nom</th><th>Score</th><th>PER</th><th>ROE</th><th>Div</th><th>RSI</th><th>Signal</th><th>Secteur</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement</p>'
+    +'</body></html>';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  var now=new Date();
+  a.download='screener_top20_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.html';
+  a.click();
+}
+
+// ══ PATCH RENDER pour nouveaux onglets ══
+var _origSetTab=setTab;
+setTab=function(t){
+  _origSetTab(t);
+  var oppEl=document.getElementById('card-list-opp');
+  var twEl=document.querySelector('.tw');
+  var clEl=document.getElementById('card-list');
+  if(!oppEl)return;
+  if(t==='opp'){
+    var top=renderTopOpportunites();
+    oppEl.style.display='block';
+    oppEl.innerHTML=renderOppCards(top);
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+  } else {
+    oppEl.style.display='none';
+    if(twEl)twEl.style.display='';
+    if(clEl)clEl.style.display='';
+    render();
+  }
+};
+
+// ══ PATCH cH pour ajouter étoile et feu ══
+var _origCH=cH;
+cH=function(col,r){
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea)tg+='<span class="ptag">PEA</span>';
+    if(r._imported)tg+='<span class="imptag">IMP</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    var tk=r.ticker;
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+tk+'">'+tk+'</span>'
+      +tg
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+tk+'">&#9878;</button>'
+      +'<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+tk+'" title="Watchlist">&#11088;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  if(col==='signaux'){
+    // Add feu tricolore before signals
+    var orig=_origCH(col,r);
+    return feuTricolore(r)+' '+orig;
+  }
+  return _origCH(col,r);
+};
+
+// ══ PATCH doFilter pour watchlist tab ══
+var _origDoFilter=doFilter;
+doFilter=function(){
+  if(curTab==='wl'){
+    var wlData=RAW_ORIG.filter(function(r){return WATCHLIST[r.ticker];});
+    return wlData;
+  }
+  return _origDoFilter();
+};
+
+// ══ SCORE HISTORY SPARKLINE ══
+function scoreHistSVG(hist){
+  if(!hist||hist.length<2)return '';
+  var w=36,h=14;
+  var mn=Math.min.apply(null,hist),mx=Math.max.apply(null,hist);
+  var rng=mx-mn||1;
+  var n=hist.length;
+  var pts=hist.map(function(v,i){return [Math.round(i*(w/(n-1))),Math.round(h-(v-mn)/rng*h)];});
+  var path=pts.map(function(p,i){return (i===0?'M':'L')+p[0]+' '+p[1];}).join(' ');
+  var last=hist[hist.length-1],first=hist[0];
+  var color=last>first?'#10b981':last<first?'#ef4444':'#64748b';
+  return '<svg class="hist-spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>'
+    +'</svg>';
+}
 
 render();
 
