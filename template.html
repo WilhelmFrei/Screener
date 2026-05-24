@@ -329,6 +329,7 @@ body.light .dash-top-item{border-color:#e2e8f0}
 <button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
+<button class="hbtn" onclick="resetFilters()" style="background:#1e2d45;color:#64748b;border:1px solid #64748b44" title="Reinitialiser tous les filtres">&#10006; Filtres</button>
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
 <button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>
 <button class="hbtn hbtn-imp" onclick="openImp()">&#128229; Tickers</button>
@@ -1022,6 +1023,7 @@ var RAW_ORIG=%%DATA%%;
 var CFG=%%CFG%%;
 var IMP_DATA=null;
 var SCAN_DATE="%%DATE%%";
+var NSCAN=%%NSCAN%%;
 var GH_OWNER="VOTRE_USERNAME";
 var GH_REPO="screener";
 var GH_TOKEN="VOTRE_GH_TOKEN";
@@ -1048,7 +1050,7 @@ function savePrefs(){
     localStorage.setItem(LS_KEY,JSON.stringify({
       cfg:CFG, sortCols:sortCols, userCols:USER_COLS,
       theme:document.body.classList.contains('light')?'light':'dark',
-      filters:{q:'',mkt:'all',sect:'all',ms:CFG.scoreMin,pea:'0',sv:0,sg:0,sd:0,st:0,smom:0}
+      // filtres non sauvegardes (reset a chaque session)
     }));
   }catch(e){}
 }
@@ -1061,7 +1063,9 @@ function loadPrefs(){
     if(Array.isArray(p.sortCols)&&p.sortCols.length)sortCols=p.sortCols;
     if(p.userCols&&typeof p.userCols==='object')USER_COLS=p.userCols;
     if(p.theme==='light')document.body.classList.add('light');
+    if(p.theme==='light')document.documentElement.classList.add('light');
     var msEl=document.getElementById('ms');if(msEl)msEl.value=CFG.scoreMin;
+    // Note: filtres (secteur, marche, recherche) non restaures intentionnellement
   }catch(e){
     try{localStorage.removeItem(LS_KEY);}catch(e2){}
   }
@@ -1334,8 +1338,11 @@ function render(){
 
   var s70=0,s50=0,sumD=0,cntD=0,rsiLow=0;
   for(i=0;i<data.length;i++){sc=getScore(data[i]);if(sc>=70)s70++;else if(sc>=50)s50++;if(data[i].div){sumD+=data[i].div;cntD++;}if(data[i].rsi&&data[i].rsi<=45)rsiLow++;}
-  var avgD=cntD?(sumD/cntD).toFixed(1)+'%':'-';
-  var sd2=[['Total',data.length,'#00d4aa'],['Score 70+',s70,'#10b981'],['Score 50-69',s50,'#f59e0b'],['Div moy',avgD,'#8b5cf6'],['RSI<=45',rsiLow,'#3b82f6']];
+  var divFiltered=data.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
+  divFiltered.sort(function(a,b){return a-b;});
+  var avgD='-';
+  if(divFiltered.length){var mid2=Math.floor(divFiltered.length/2);avgD=(divFiltered.length%2?divFiltered[mid2]:((divFiltered[mid2-1]+divFiltered[mid2])/2)).toFixed(1)+'%';}
+  var sd2=[['Total',data.length,'#00d4aa'],['Score 70+',s70,'#10b981'],['Score 50-69',s50,'#f59e0b'],['Div med.',avgD,'#8b5cf6'],['RSI<=45',rsiLow,'#3b82f6']];
   var sh='';for(i=0;i<sd2.length;i++)sh+='<div class="stat"><div class="sl">'+sd2[i][0]+'</div><div class="sv" style="color:'+sd2[i][2]+'">'+sd2[i][1]+'</div></div>';
   document.getElementById('stats').innerHTML=sh;
 
@@ -2130,11 +2137,16 @@ function openBacktest(){
 function renderDashboard(){
   var top5=renderTopOpportunites().slice(0,5);
   var wlKeys=Object.keys(WATCHLIST);
-  var totalScan=RAW_ORIG.length;
+  var totalScan=typeof NSCAN!=='undefined'?NSCAN:RAW_ORIG.length;
   var score70=RAW_ORIG.filter(function(r){return getScore(r)>=70;}).length;
-  var divMoy=0,ndiv=0;
-  RAW_ORIG.forEach(function(r){if(r.div){divMoy+=r.div;ndiv++;}});
-  divMoy=ndiv?( divMoy/ndiv).toFixed(1)+'%':'N/A';
+  var divVals=RAW_ORIG.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
+  divVals.sort(function(a,b){return a-b;});
+  var divMoy='N/A';
+  if(divVals.length){
+    var mid=Math.floor(divVals.length/2);
+    var median=divVals.length%2?divVals[mid]:((divVals[mid-1]+divVals[mid])/2);
+    divMoy=median.toFixed(1)+'%';
+  }
   var rsiLow=RAW_ORIG.filter(function(r){return r.rsi&&r.rsi<=45;}).length;
 
   // Sector distribution of top 20
@@ -2167,7 +2179,7 @@ function renderDashboard(){
     '<div style="font-size:10px;color:#64748b">score 70+</div></div>'+
 
     '<div class="dash-card"><div class="dash-card-title">Marche</div>'+
-    '<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. moy.</div>'+
+    '<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. mediane (&le;20%)</div>'+
     '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#8b5cf6">'+divMoy+'</div>'+
     '<div style="font-size:10px;color:#64748b;margin-top:6px;margin-bottom:2px">RSI survente</div>'+
     '<div style="font-family:monospace;font-size:18px;font-weight:700;color:#3b82f6">'+rsiLow+'</div></div>'+
@@ -2259,6 +2271,29 @@ setTimeout(function(){
   var nel=document.getElementById('b-new');
   if(nel)nel.textContent=ne.length;
 },200);
+
+// ══ RESET FILTRES ══
+function resetFilters(){
+  document.getElementById('q').value='';
+  document.getElementById('mkt').value='all';
+  var se=document.getElementById('sect');if(se)se.value='all';
+  document.getElementById('ms').value=CFG.scoreMin;
+  document.getElementById('peaOnly').value='0';
+  document.getElementById('f-sv').value='0';
+  document.getElementById('f-sg').value='0';
+  document.getElementById('f-sd').value='0';
+  document.getElementById('f-st').value='0';
+  document.getElementById('f-smom').value='0';
+  ADV_FILTERS={};
+  var advEl=document.getElementById('adv-search');
+  if(advEl)advEl.classList.remove('open');
+  ['rsi','sv','div','gr'].forEach(function(id){
+    var el=document.getElementById('adv-'+id+'-val');
+    if(el)el.value='';
+  });
+  setTab('all');
+  render();
+}
 
 render();
 
