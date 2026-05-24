@@ -1619,7 +1619,7 @@ function toggleStar(tk,btn){
     delete WATCHLIST[tk];
     btn.classList.remove('on');
   } else {
-    WATCHLIST[tk]=getScore(RAW_ORIG.filter(function(r){return r.ticker===tk;})[0]||{score:0});
+    var _r=RAW_ORIG.filter(function(r){return r.ticker===tk;})[0]; var _sc=_r?getScore(_r):0; WATCHLIST[tk]=typeof _sc==='number'?_sc:parseInt(_sc)||0; console.log('WL add:',tk,'score:',WATCHLIST[tk]);
     btn.classList.add('on');
   }
   saveWatchlist();
@@ -1791,8 +1791,7 @@ function exportPDF(){
     +'<table><thead><tr>'
     +'<th>#</th><th>Ticker</th><th>Nom</th><th>Score</th><th>PER</th><th>ROE</th><th>Div</th><th>RSI</th><th>Signal</th><th>Secteur</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement</p>'
-    +'</body></html>';
+    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement</p></body></html>';
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1918,8 +1917,10 @@ function loadAccent(){
 loadAccent();
 
 function openTheme(){
+  try{
   var el=document.getElementById('theme-swatches');
-  if(!el)return;
+  var modal=document.getElementById('modal-theme');
+  if(!el||!modal){console.error('Theme modal elements missing');return;}
   el.innerHTML='';
   ACCENT_COLORS.forEach(function(c){
     var sw=document.createElement('span');
@@ -1933,7 +1934,8 @@ function openTheme(){
     };
     el.appendChild(sw);
   });
-  document.getElementById('modal-theme').className='modal-bg open';
+  modal.className='modal-bg open';
+  }catch(err){console.error('openTheme error:',err);}
 }
 
 // ══ DELTA SCORE (variation vs scan precedent) ══
@@ -2088,6 +2090,9 @@ function passesAdvFilter(r){
 
 // ══ BACKTEST WATCHLIST ══
 function openBacktest(){
+  console.log('WL keys:',Object.keys(WATCHLIST),'values:',WATCHLIST);
+  var modal=document.getElementById('modal-bt');
+  if(!modal){console.error('modal-bt not found');return;}
   var wlKeys=Object.keys(WATCHLIST);
   if(!wlKeys.length){
     alert('Ajoutez des actions a votre watchlist d\'abord.');
@@ -2096,7 +2101,7 @@ function openBacktest(){
   var rows=wlKeys.map(function(tk){
     var r=RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
     if(!r)return null;
-    var addedScore=WATCHLIST[tk];
+    var addedScore=parseInt(WATCHLIST[tk])||0;
     var currScore=getScore(r);
     var delta=currScore-addedScore;
     return {ticker:tk,nom:r.nom,addedScore:addedScore,currScore:currScore,delta:delta,r:r};
@@ -2118,7 +2123,7 @@ function openBacktest(){
   });
 
   document.getElementById('bt-content').innerHTML=html||'<div style="color:#64748b;font-size:12px">Aucune donnee</div>';
-  document.getElementById('modal-bt').className='modal-bg open';
+  modal.className='modal-bg open';
 }
 
 // ══ DASHBOARD ══
@@ -2257,4 +2262,42 @@ setTimeout(function(){
 
 render();
 
-</script></body></html>
+</script>
+
+<!-- Modal Radar Chart -->
+<div class="modal-bg" id="modal-radar">
+<div class="modal" style="max-width:420px">
+<button class="modal-close" onclick="document.getElementById('modal-radar').className='modal-bg'">&#10005;</button>
+<h3 id="radar-title">&#127919; Profil de l'action</h3>
+<svg class="radar-svg" id="radar-svg" width="280" height="280" viewBox="0 0 280 280"></svg>
+<div id="radar-scores" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:10px"></div>
+<div id="radar-delta" style="margin-top:8px;font-size:11px;color:#64748b"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-radar').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+<!-- Modal Backtest Watchlist -->
+<div class="modal-bg" id="modal-bt">
+<div class="modal" style="max-width:480px">
+<button class="modal-close" onclick="document.getElementById('modal-bt').className='modal-bg'">&#10005;</button>
+<h3>&#128200; Backtest Watchlist</h3>
+<div style="font-size:10px;color:#64748b;margin-bottom:10px">Evolution du score depuis l'ajout a la watchlist</div>
+<div id="bt-content"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-bt').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+<!-- Modal Theme -->
+<div class="modal-bg" id="modal-theme">
+<div class="modal" style="max-width:360px">
+<button class="modal-close" onclick="document.getElementById('modal-theme').className='modal-bg'">&#10005;</button>
+<h3>&#127912; Theme</h3>
+<div style="font-size:11px;color:#64748b;margin-bottom:12px">Couleur d'accent</div>
+<div id="theme-swatches" style="margin-bottom:16px"></div>
+<div style="font-size:11px;color:#64748b;margin-bottom:8px">Mode</div>
+<div style="display:flex;gap:8px">
+<button onclick="if(!document.body.classList.contains('light'))toggleTheme()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e2d45;background:#f1f5f9;color:#1e293b;cursor:pointer;font-size:12px">&#9728; Clair</button>
+<button onclick="if(document.body.classList.contains('light'))toggleTheme()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e2d45;background:#0a0e1a;color:#e2e8f0;cursor:pointer;font-size:12px">&#9790; Sombre</button>
+</div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-theme').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+</body></html>
