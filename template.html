@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Stock Screener</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{background:#0a0e1a;color-scheme:dark}html,body{background:#0a0e1a!important;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:100%}
+.hdr{background:#111827;border-bottom:1px solid #1e2d45;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:10}
+.htitle{font-family:monospace;font-size:17px;font-weight:900;color:#00d4aa}
+.hsub{font-size:10px;color:#64748b;margin-top:2px}
+.hbtns{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hbtn{font-size:11px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;white-space:nowrap}
+.hbtn-scan{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000}
+.hbtn-cfg{background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44}
+.hbtn-imp{background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44}
+.hbtn-guide{background:#1e2d45;color:#8b5cf6;border:1px solid #8b5cf644}
+.wrap{max-width:1500px;margin:0 auto;padding:12px;background:#0a0e1a}
+.modal-bg{display:none;position:fixed;inset:0;background:#000000bb;z-index:50;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#111827;border:1px solid #1e2d45;border-radius:14px;padding:20px;width:90%;max-width:540px;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:monospace;font-size:14px;color:#00d4aa;margin-bottom:14px}
+.modal-close{float:right;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;margin-top:-4px}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cfg-item{background:#0d1520;border-radius:8px;padding:10px}
+.cfg-item label{display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.cfg-item input{width:100%;background:#111827;border:1px solid #1e2d45;color:#00d4aa;font-size:13px;padding:6px 8px;border-radius:6px;outline:none;font-family:monospace;text-align:right}
+.cfg-section{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px;border-top:1px solid #1e2d45;padding-top:10px}
+.cfg-note{font-size:10px;color:#f59e0b;margin-bottom:10px;line-height:1.5}
+.modal-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;font-weight:700;font-size:13px}
+.modal-btn-ok{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000;margin-bottom:8px}
+.modal-btn-cancel{background:#1e2d45;color:#64748b}
+.imp-area{width:100%;min-height:100px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-family:monospace;font-size:12px;padding:10px;border-radius:8px;margin-bottom:10px;resize:vertical}
+.imp-note{font-size:10px;color:#64748b;margin-bottom:12px;line-height:1.6}
+.mrow{display:flex;gap:6px;margin-bottom:10px}
+.mbtn{flex:1;padding:10px 4px;border-radius:10px;border:2px solid #1e2d45;background:#0d1520;cursor:pointer;text-align:center}
+.mbtn.on{border-color:#00d4aa;background:#00d4aa18}
+.mico{font-size:16px;margin-bottom:2px}
+.mlbl{font-size:10px;font-weight:700;color:#64748b;font-family:monospace}
+.mbtn.on .mlbl{color:#00d4aa}
+.mdesc{background:#0d1520;border:1px solid #1e2d45;border-radius:8px;padding:8px 12px;font-size:11px;color:#64748b;margin-bottom:10px}
+.filters{background:#111827;border:1px solid #1e2d45;border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:10px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px}
+select,input[type=text],input[type=number]{background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-size:12px;padding:7px 8px;border-radius:7px;outline:none;font-family:inherit}
+.tabs{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}.tabs::-webkit-scrollbar{display:none}
+.tab{padding:7px 10px;border-radius:8px;border:1px solid #1e2d45;background:#0d1520;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;font-family:monospace;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
+.tab.on{border-color:#00d4aa;background:#111827;color:#e2e8f0}
+.bdg{background:#1e2d45;color:#64748b;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px}
+.tab.on .bdg{background:#00d4aa;color:#000}
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;width:100%}
+.stat{background:#111827;border:1px solid #1e2d45;border-radius:9px;padding:8px 12px;flex:1;min-width:75px}
+.sl{font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
+.sv{font-family:monospace;font-size:17px;font-weight:900;margin-top:2px}
+.tw{background:#111827;border:1px solid #1e2d45;border-radius:12px;overflow:hidden}
+.ts{overflow-x:auto;max-height:60vh;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead th{background:#0d1520;padding:8px 8px;font-size:8px;font-family:monospace;text-transform:uppercase;letter-spacing:.7px;color:#64748b;cursor:pointer;border-bottom:1px solid #1e2d45;white-space:nowrap;position:sticky;top:0;z-index:2;text-align:left;user-select:none}
+thead th:hover{color:#00d4aa}
+thead th.sorted{color:#00d4aa}
+tbody td{padding:7px 8px;border-bottom:1px solid #0d1520;vertical-align:middle;white-space:nowrap}
+tbody tr:nth-child(even) td{background:#0a1020}
+tbody tr:hover td{background:#152030!important}
+.tk{font-family:monospace;font-weight:700;color:#00d4aa;font-size:12px}
+.ptag{font-size:8px;padding:1px 4px;border-radius:3px;background:#00d4aa18;color:#00d4aa;border:1px solid #00d4aa33;margin-left:3px}
+.imptag{font-size:8px;padding:1px 4px;border-radius:3px;background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33;margin-left:3px}
+.nm{font-size:10px;color:#64748b;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.ct{font-size:9px;color:#2a4060}
+.bw{display:flex;align-items:center;gap:4px}
+.br{width:38px;height:4px;border-radius:2px;background:#1e2d45;overflow:hidden}
+.bf{height:100%;border-radius:2px}
+.chip{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;margin-right:2px;font-family:monospace;background:#00d4aa18;color:#00d4aa;border:1px solid #00d4aa33}
+.empty{text-align:center;padding:40px;color:#64748b}
+.disc{margin-top:10px;padding:8px 12px;border:1px solid #f59e0b33;border-radius:8px;background:#f59e0b06;font-size:10px;color:#64748b}
+.stale-banner{background:#f59e0b18;border:1px solid #f59e0b44;border-radius:8px;padding:8px 14px;font-size:11px;color:#f59e0b;margin-bottom:10px;display:none;align-items:center;gap:8px}
+.th-wrap{display:inline-flex;align-items:center;gap:3px;position:relative}
+.tip{display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e2d45;border:1px solid #2a3f5f;border-radius:8px;padding:8px 10px;font-size:10px;color:#e2e8f0;white-space:normal;width:200px;z-index:20;line-height:1.5;font-family:system-ui;text-transform:none;letter-spacing:0;font-weight:400;text-align:left;pointer-events:none}
+.th-wrap:hover .tip{display:block}
+.tip-ico{font-size:8px;color:#2a4060;cursor:help}
+.card-list{display:none;flex-direction:column;gap:8px;width:100%}
+.card{background:#111827;border:1px solid #1e2d45;border-radius:12px;padding:12px 14px}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.card-tk{font-family:monospace;font-weight:900;color:#00d4aa;font-size:14px}
+.card-score{font-family:monospace;font-weight:900;font-size:20px}
+.card-nom{font-size:11px;color:#64748b;margin-bottom:6px}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.card-kv{background:#0d1520;border-radius:6px;padding:5px 7px}
+.card-k{font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+.card-v{font-family:monospace;font-size:11px;font-weight:700;margin-top:2px}
+.card-sigs{font-size:9px;color:#64748b;margin-top:6px}
+.cmp-btn{font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid #1e2d45;background:#0d1520;color:#64748b;cursor:pointer;margin-left:4px;font-family:monospace}
+.cmp-btn.on{border-color:#f59e0b;color:#f59e0b;background:#f59e0b10}
+.cmp-grid{display:grid;gap:12px}
+.cmp-row{display:grid;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid #0d1520}
+.cmp-row:last-child{border:none}
+.cmp-lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;min-width:80px}
+.cmp-vals{display:flex;gap:6px;flex-wrap:wrap}
+.cmp-val{font-family:monospace;font-size:11px;font-weight:700;background:#0d1520;border-radius:5px;padding:3px 7px;min-width:60px;text-align:center}
+.cmp-header{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.cmp-hcol{flex:1;background:#0d1520;border-radius:8px;padding:8px 10px;text-align:center;min-width:80px}
+.cmp-htk{font-family:monospace;font-weight:900;color:#00d4aa;font-size:13px}
+.cmp-hnom{font-size:9px;color:#64748b;margin-top:2px}
+.spark{display:inline-block;vertical-align:middle}
+.div-badge{font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;font-family:monospace;white-space:nowrap}
+.div-fond{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.div-tech{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+.col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.col-item{display:flex;align-items:center;gap:5px;background:#0d1520;border-radius:6px;padding:6px 8px;cursor:pointer;border:1px solid transparent}
+.col-item.pinned{border-color:#00d4aa44}
+.col-item input{accent-color:#00d4aa;cursor:pointer}
+.col-item label{font-size:10px;color:#94a3b8;cursor:pointer;font-family:monospace}
+.ssf{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;width:100%}
+.ssf-lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px}
+.ssf-item{display:flex;align-items:center;gap:4px;background:#0d1520;border:1px solid #1e2d45;border-radius:6px;padding:4px 8px}
+.ssf-item label{font-size:10px;color:#64748b;font-family:monospace}
+.ssf-item input{width:42px;background:#0a0e1a;border:none;color:#00d4aa;font-size:11px;font-family:monospace;text-align:center;outline:none}
+.theme-btn{background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33;font-size:13px;padding:6px 10px;border-radius:8px;cursor:pointer;border-width:1px}
+.sort-badge{font-size:8px;background:#00d4aa;color:#000;border-radius:3px;padding:0 3px;margin-left:2px;font-weight:900}
+:root.light{background:#f1f5f9;color-scheme:light}html.light,body.light{background:#f1f5f9!important;color:#1e293b}body.light .wrap{background:#f1f5f9}
+body.light .hdr{background:#fff;border-color:#e2e8f0}
+body.light .modal,body.light .guide-page,body.light .guide-header{background:#fff;border-color:#e2e8f0}
+body.light .guide-card{background:#f8fafc;border-color:#e2e8f0}
+body.light .tw{background:#fff;border-color:#e2e8f0}
+body.light .stat{background:#fff;border-color:#e2e8f0}
+body.light .filters{background:#fff;border-color:#e2e8f0}
+body.light .mdesc{background:#f8fafc;border-color:#e2e8f0;color:#475569}
+body.light .mbtn{background:#f1f5f9;border-color:#e2e8f0;color:#475569}
+body.light .mbtn.on{background:#fff;border-color:#00d4aa;color:#0f172a}
+body.light .cfg-item{background:#f1f5f9;border-color:#e2e8f0}
+body.light .col-item{background:#f1f5f9;border-color:#e2e8f0}
+body.light .col-item label{color:#475569}
+body.light .ssf-item{background:#f1f5f9;border-color:#e2e8f0}
+body.light .ssf-item label{color:#475569}
+body.light .ssf-item input{color:#0f172a;background:#fff}
+body.light .card{background:#fff;border-color:#e2e8f0}
+body.light .card-kv{background:#f1f5f9}
+body.light .card-k{color:#94a3b8}
+body.light .card-nom{color:#475569}
+body.light .card-sigs{color:#475569}
+body.light tbody td{border-bottom-color:#e2e8f0;background:#fff}
+body.light tbody tr:nth-child(even) td{background:#f8fafc}
+body.light tbody tr:hover td{background:#eff6ff!important}
+body.light thead th{background:#f1f5f9;color:#64748b;border-bottom-color:#e2e8f0}
+body.light .tk{color:#0284c7}
+body.light .ct{color:#94a3b8}
+body.light .sl{color:#94a3b8}
+body.light .nm{color:#64748b}
+body.light .br{background:#e2e8f0}
+body.light .tab{background:#f1f5f9;border-color:#e2e8f0;color:#64748b}
+body.light .tab.on{background:#fff;border-color:#00d4aa;color:#0f172a}
+body.light .bdg{background:#e2e8f0;color:#64748b}
+body.light .chip{background:#e0f2fe;color:#0284c7;border-color:#bae6fd}
+body.light .stale-banner{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+body.light .cfg-section{color:#94a3b8;border-color:#e2e8f0}
+body.light .cfg-note{color:#d97706}
+body.light .cfg-item input{background:#fff;border-color:#cbd5e1;color:#0f172a}
+body.light .tog-sl{background:#e2e8f0}
+body.light .cmp-grid .cmp-row{border-color:#e2e8f0}
+body.light .cmp-val{background:#f1f5f9}
+body.light .cmp-hcol{background:#f1f5f9}
+body.light .cmp-htk{color:#0284c7}
+body.light .login-box{background:#fff;border-color:#e2e8f0}
+body.light select,body.light input[type=text],body.light input[type=number]{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .hbtn-cfg{background:#f1f5f9;color:#00d4aa;border-color:#00d4aa44}
+body.light .hbtn-imp{background:#f1f5f9;color:#f59e0b;border-color:#f59e0b44}
+body.light .hbtn-guide{background:#f1f5f9;color:#8b5cf6;border-color:#8b5cf644}
+body.light .guide-cat{color:#94a3b8;border-color:#e2e8f0}
+body.light .gc-desc{color:#475569}
+body.light .gc-title{color:#1e293b}
+body.light .tip{background:#fff;border-color:#e2e8f0;color:#1e293b}
+.login-screen{display:flex;position:fixed;inset:0;background:#0a0e1a!important;z-index:100;align-items:center;justify-content:center;color-scheme:dark}
+.login-box{background:#111827!important;border:1px solid #1e2d45;border-radius:16px;padding:36px 32px;width:90%;max-width:360px;text-align:center;color-scheme:dark}
+.login-logo{font-family:monospace;font-size:22px;font-weight:900;color:#00d4aa;margin-bottom:6px}
+.login-sub{font-size:11px;color:#64748b;margin-bottom:28px}
+.login-input{width:100%;background:#0d1520!important;border:1px solid #1e2d45;color:#e2e8f0!important;font-size:14px;padding:12px 14px;border-radius:9px;outline:none;font-family:monospace;text-align:center;letter-spacing:3px;margin-bottom:10px}
+.login-input:focus{border-color:#00d4aa44}
+.login-btn{width:100%;padding:12px;border-radius:9px;border:none;cursor:pointer;font-family:monospace;font-weight:700;font-size:13px;background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000;margin-bottom:8px}
+.login-err{font-size:11px;color:#ef4444;min-height:16px;margin-bottom:6px}
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #0d1520}
+.tog-row:last-child{border-bottom:none}
+.tog-label{font-size:11px;color:#94a3b8}
+.tog{position:relative;width:32px;height:18px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;inset:0;background:#1e2d45;border-radius:18px;cursor:pointer;transition:.2s}
+.tog-sl:before{content:"";position:absolute;width:12px;height:12px;left:3px;bottom:3px;background:#64748b;border-radius:50%;transition:.2s}
+.tog input:checked+.tog-sl{background:#00d4aa22;border:1px solid #00d4aa55}
+.tog input:checked+.tog-sl:before{transform:translateX(14px);background:#00d4aa}
+.guide-page{display:none;position:fixed;inset:0;background:#0a0e1a;z-index:40;overflow-y:auto}
+.guide-page.open{display:block}
+.guide-header{background:#111827;border-bottom:1px solid #1e2d45;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.guide-title{font-family:monospace;font-size:16px;font-weight:900;color:#8b5cf6}
+.guide-wrap{max-width:1100px;margin:0 auto;padding:24px 16px}
+.guide-cat{font-family:monospace;font-size:10px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid #1e2d45}
+.guide-cat:first-child{margin-top:0}
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.guide-card{background:#111827;border:1px solid #1e2d45;border-radius:12px;padding:18px;transition:border-color .2s}
+.guide-card:hover{border-color:#8b5cf644}
+.gc-title{font-family:monospace;font-size:13px;font-weight:900;color:#e2e8f0;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.gc-badge{font-size:8px;padding:2px 7px;border-radius:20px;font-weight:700}
+.badge-tech{background:#3b82f618;color:#3b82f6;border:1px solid #3b82f633}
+.badge-value{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.badge-growth{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+.badge-div{background:#8b5cf618;color:#8b5cf6;border:1px solid #8b5cf633}
+.badge-qual{background:#ec489918;color:#ec4899;border:1px solid #ec489933}
+.gc-desc{font-size:11px;color:#64748b;line-height:1.6;margin-bottom:12px}
+.gc-zones{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.zone{font-size:10px;padding:3px 9px;border-radius:20px;font-family:monospace;font-weight:700}
+.zone-g{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.zone-y{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+.zone-r{background:#ef444418;color:#ef4444;border:1px solid #ef444433}
+.gc-svg{width:100%;overflow:visible}
+@media(max-width:640px){.ts{display:none}.card-list{display:flex}.hbtn-scan span{display:none}.filters{gap:6px}.fg label{font-size:8px}.stat{min-width:60px}.hbtns{gap:4px}.hbtn{padding:6px 9px;font-size:10px}}
+
+body.light .theme-btn{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+body.light .cmp-btn{background:#f1f5f9;border-color:#e2e8f0;color:#475569}
+body.light .cmp-btn.on{border-color:#f59e0b;color:#f59e0b;background:#fef3c7}
+body.light .hbtn-scan{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000}
+body.light #cmp-open-btn{background:#fef3c7;color:#f59e0b;border-color:#f59e0b44}
+body.light .mico{filter:none}
+body.light .ptag{background:#e0f2fe;color:#0284c7;border-color:#bae6fd}
+body.light .imptag{background:#fef3c7;color:#d97706;border-color:#fcd34d}
+
+body.light .hbtn{background:#f1f5f9!important;color:#475569!important;border:1px solid #e2e8f0!important}
+body.light .hbtn-scan{background:linear-gradient(135deg,#00d4aa,#00a87f);color:#000;border:none}
+body.light .hbtn-guide{background:#f1f5f9;color:#8b5cf6;border:1px solid #8b5cf644}
+body.light .hbtn-cfg{background:#f1f5f9;color:#00d4aa;border:1px solid #00d4aa44}
+body.light .hbtn-imp{background:#f1f5f9;color:#f59e0b;border:1px solid #f59e0b44}
+
+/* Watchlist */
+.star-btn{font-size:12px;background:none;border:none;cursor:pointer;padding:0 3px;opacity:.4;transition:opacity .2s}
+.star-btn.on{opacity:1;color:#f59e0b}
+/* Feu tricolore */
+.feu{display:inline-flex;gap:3px;align-items:center;vertical-align:middle}
+.feu-dot{width:8px;height:8px;border-radius:50%;background:#1e2d45}
+.feu-dot.on-g{background:#10b981}
+.feu-dot.on-y{background:#f59e0b}
+.feu-dot.on-r{background:#ef4444}
+/* Top opportunités */
+.opp-card{background:#111827;border:1px solid #1e2d45;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:border-color .2s}
+.opp-card:hover{border-color:#00d4aa44}
+.opp-rank{font-family:monospace;font-size:22px;font-weight:900;color:#1e2d45;min-width:32px}
+.opp-tk{font-family:monospace;font-size:14px;font-weight:900;color:#00d4aa}
+.opp-nom{font-size:10px;color:#64748b;margin-top:2px}
+.opp-scores{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.opp-s{font-size:9px;padding:2px 7px;border-radius:20px;font-family:monospace;font-weight:700}
+.opp-s-g{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.opp-s-y{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+.opp-s-r{background:#ef444418;color:#ef4444;border:1px solid #ef444433}
+/* Alerte watchlist */
+.wl-alert{background:#f59e0b12;border:1px solid #f59e0b33;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#f59e0b;display:none}
+/* Score history sparkline */
+.hist-spark{display:inline-block;vertical-align:middle;margin-left:4px}
+/* PDF button */
+.pdf-btn{font-size:11px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:monospace;background:#1e2d45;color:#ec4899;border:1px solid #ec489944}
+/* Light mode additions */
+body.light .opp-card{background:#fff;border-color:#e2e8f0}
+body.light .opp-rank{color:#e2e8f0}
+body.light .wl-alert{background:#fef3c720;border-color:#fcd34d}
+body.light .pdf-btn{background:#f1f5f9;color:#ec4899;border-color:#ec489944}
+
+/* Radar chart */
+.radar-svg{display:block;margin:0 auto}
+.radar-axis{stroke:#1e2d45;stroke-width:1}
+.radar-grid{stroke:#1e2d45;stroke-width:0.5;fill:none}
+.radar-area{fill:#00d4aa18;stroke:#00d4aa;stroke-width:1.5}
+.radar-dot{fill:#00d4aa;r:3}
+.radar-label{font-size:9px;fill:#64748b;font-family:monospace;text-anchor:middle}
+
+/* Delta score badge */
+.delta{font-family:monospace;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px}
+.delta-up{background:#10b98118;color:#10b981;border:1px solid #10b98133}
+.delta-dn{background:#ef444418;color:#ef4444;border:1px solid #ef444433}
+.delta-eq{background:#1e2d45;color:#64748b}
+
+/* Dashboard widget */
+.dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.dash-card{background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px}
+.dash-card-title{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.dash-top-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0d1520}
+.dash-top-item:last-child{border:none}
+
+/* Backtest */
+.bt-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #0d1520}
+.bt-row:last-child{border:none}
+.bt-pct{font-family:monospace;font-size:14px;font-weight:900}
+
+/* Theme picker */
+.theme-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.2s;display:inline-block;margin:3px}
+.theme-swatch.active{border-color:#fff;transform:scale(1.2)}
+
+/* Nouveaux entrants badge */
+.new-badge{font-size:8px;padding:1px 5px;border-radius:3px;background:#8b5cf618;color:#8b5cf6;border:1px solid #8b5cf633;margin-left:3px;font-family:monospace}
+
+/* Recherche avancée */
+.adv-search{display:none;background:#0d1520;border:1px solid #1e2d45;border-radius:8px;padding:10px;margin-top:6px;flex-wrap:wrap;gap:8px}
+.adv-search.open{display:flex}
+.adv-row{display:flex;align-items:center;gap:6px}
+.adv-lbl{font-size:10px;color:#64748b;white-space:nowrap}
+.adv-op{background:#111827;border:1px solid #1e2d45;color:#e2e8f0;font-size:11px;padding:4px 6px;border-radius:5px}
+.adv-val{width:55px;background:#111827;border:1px solid #1e2d45;color:#00d4aa;font-size:11px;padding:4px 6px;border-radius:5px;font-family:monospace}
+
+/* Section corrélation */
+.sector-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sector-name{font-size:10px;color:#94a3b8;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sector-track{flex:1;height:6px;background:#1e2d45;border-radius:3px;overflow:hidden}
+.sector-fill{height:100%;border-radius:3px;background:#00d4aa}
+.sector-count{font-size:10px;font-family:monospace;color:#64748b;width:20px;text-align:right}
+
+/* Light mode additions */
+body.light .dash-card{background:#f8fafc;border-color:#e2e8f0}
+body.light .adv-search{background:#f8fafc;border-color:#e2e8f0}
+body.light .adv-op,body.light .adv-val{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .bt-row{border-color:#e2e8f0}
+body.light .radar-axis,body.light .radar-grid{stroke:#e2e8f0}
+body.light .radar-label{fill:#94a3b8}
+body.light .dash-top-item{border-color:#e2e8f0}
+</style></head><body>
+<div class="hdr">
+<div><div class="htitle">&#128225; Stock Screener</div>
+<div class="hsub">2000 actions scannees - Yahoo Finance - 01/01/2026 07:00</div></div>
+<div class="hbtns">
+<span style="font-family:monospace;font-size:10px;color:#64748b" id="nxt"></span>
+<button class="theme-btn" onclick="openTheme()" id="theme-btn" title="Theme">&#127912;</button>
+<button class="hbtn hbtn-guide" onclick="openGuide()">&#128218; Guide</button>
+<button class="hbtn" onclick="openCols()" style="background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44">&#9638; Colonnes</button>
+<button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>
+<button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
+<button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
+<button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
+<button class="hbtn" onclick="resetFilters()" style="background:#1e2d45;color:#64748b;border:1px solid #64748b44" title="Reinitialiser tous les filtres">&#10006; Filtres</button>
+<button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
+<button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>
+<button class="hbtn hbtn-imp" onclick="openImp()">&#128229; Tickers</button>
+<button class="hbtn hbtn-scan" onclick="triggerScan()">&#9889; Nouveau scan</button>
+</div></div>
+<div class="modal-bg" id="modal-cfg"><div class="modal" style="max-width:620px">
+<button class="modal-close" onclick="closeCfg()">&#10005;</button>
+<h3>&#9881; Criteres de scoring</h3>
+<div class="cfg-note">Modifications instantanees. Nouveau scan pour recharger Yahoo Finance.</div>
+<div class="cfg-section">Poids du score (total = 100)</div><div class="cfg-grid">
+<div class="cfg-item"><label>Poids Value (%)</label><input type="number" id="c-pv" step="5"></div>
+<div class="cfg-item"><label>Poids Growth (%)</label><input type="number" id="c-pg" step="5"></div>
+<div class="cfg-item"><label>Poids Dividende (%)</label><input type="number" id="c-pd" step="5"></div>
+<div class="cfg-item"><label>Poids Technique (%)</label><input type="number" id="c-pt" step="5"></div>
+</div>
+<div class="cfg-section">Valorisation — Seuils & Activation</div>
+<div class="cfg-grid">
+<div class="cfg-item"><label>PER max</label><input type="number" id="c-per" step="1"></div>
+<div class="cfg-item"><label>P/Book max</label><input type="number" id="c-pbv" step="0.5"></div>
+<div class="cfg-item"><label>EV/EBITDA max</label><input type="number" id="c-ev" step="1"></div>
+<div class="cfg-item"><label>P/S max</label><input type="number" id="c-ps" step="0.5"></div>
+<div class="cfg-item"><label>P/FCF max</label><input type="number" id="c-pfcf" step="2"></div>
+<div class="cfg-item"><label>Graham min (%)</label><input type="number" id="c-graham" step="5"></div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-row"><span class="tog-label">PER actif</span><label class="tog"><input type="checkbox" id="t-per" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">P/Book actif</span><label class="tog"><input type="checkbox" id="t-pbv" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">EV/EBITDA actif</span><label class="tog"><input type="checkbox" id="t-ev" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">P/S actif</span><label class="tog"><input type="checkbox" id="t-ps" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">P/FCF actif</span><label class="tog"><input type="checkbox" id="t-pfcf" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Graham actif</span><label class="tog"><input type="checkbox" id="t-graham" checked><span class="tog-sl"></span></label></div>
+</div>
+<div class="cfg-section">Croissance & Qualite — Seuils & Activation</div>
+<div class="cfg-grid">
+<div class="cfg-item"><label>ROE min (%)</label><input type="number" id="c-roe" step="1"></div>
+<div class="cfg-item"><label>Current Ratio min</label><input type="number" id="c-cr" step="0.1"></div>
+<div class="cfg-item"><label>D/E max (%)</label><input type="number" id="c-de" step="10"></div>
+<div class="cfg-item"><label>FCF Yield min (%)</label><input type="number" id="c-fcfy" step="1"></div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-row"><span class="tog-label">ROE actif</span><label class="tog"><input type="checkbox" id="t-roe" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">BPA Croissance actif</span><label class="tog"><input type="checkbox" id="t-bpa" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">PEG actif</span><label class="tog"><input type="checkbox" id="t-peg" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Current Ratio actif</span><label class="tog"><input type="checkbox" id="t-cr" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Debt/Equity actif</span><label class="tog"><input type="checkbox" id="t-de" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">FCF Yield actif</span><label class="tog"><input type="checkbox" id="t-fcfy" checked><span class="tog-sl"></span></label></div>
+</div>
+<div class="cfg-section">Technique — Seuils & Activation</div>
+<div class="cfg-grid">
+<div class="cfg-item"><label>RSI survente max</label><input type="number" id="c-rsi" step="1"></div>
+<div class="cfg-item"><label>Stoch. survente max</label><input type="number" id="c-stoch" step="1"></div>
+<div class="cfg-item"><label>CCI survente (negatif)</label><input type="number" id="c-cci" step="10"></div>
+<div class="cfg-item"><label>ADX min</label><input type="number" id="c-adx" step="1"></div>
+<div class="cfg-item"><label>Williams %R survente</label><input type="number" id="c-willr" step="5"></div>
+<div class="cfg-item"><label>RoC min (%)</label><input type="number" id="c-roc" step="1"></div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-row"><span class="tog-label">RSI actif</span><label class="tog"><input type="checkbox" id="t-rsi" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">MACD actif</span><label class="tog"><input type="checkbox" id="t-macd" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">CCI actif</span><label class="tog"><input type="checkbox" id="t-cci" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Stochastique actif</span><label class="tog"><input type="checkbox" id="t-stoch" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Moyennes Mobiles actif</span><label class="tog"><input type="checkbox" id="t-mm" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">ADX actif</span><label class="tog"><input type="checkbox" id="t-adx" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">Williams %R actif</span><label class="tog"><input type="checkbox" id="t-willr" checked><span class="tog-sl"></span></label></div>
+<div class="tog-row"><span class="tog-label">RoC actif</span><label class="tog"><input type="checkbox" id="t-roc" checked><span class="tog-sl"></span></label></div>
+</div>
+<div class="cfg-section">Filtrage</div><div class="cfg-grid">
+<div class="cfg-item"><label>Score minimum /100</label><input type="number" id="c-smin" step="5"></div>
+</div>
+<button class="modal-btn modal-btn-ok" onclick="applyCfg()">&#10003; Appliquer</button>
+<button class="modal-btn modal-btn-cancel" onclick="closeCfg()">Annuler</button>
+</div></div>
+<div class="modal-bg" id="modal-imp"><div class="modal">
+<button class="modal-close" onclick="closeImp()">&#10005;</button>
+<h3>&#128229; Importer des tickers</h3>
+<div class="imp-note">Un ticker par ligne ou separes par virgule.<br>Ex: AAPL, MC.PA, AIR.PA<br>Filtre les donnees du dernier scan. Au prochain scan automatique la liste reprend normalement.</div>
+<textarea class="imp-area" id="imp-text" placeholder="AAPL&#10;MSFT&#10;MC.PA"></textarea>
+<button class="modal-btn modal-btn-ok" onclick="importTickers()">&#10003; Appliquer</button>
+<button class="modal-btn modal-btn-cancel" onclick="closeImp()" style="margin-top:8px">Annuler</button>
+</div></div>
+<div class="modal-bg" id="modal-scan"><div class="modal" style="text-align:center">
+<h3>&#9889; Scan lance sur GitHub Actions</h3>
+<p style="color:#64748b;font-size:12px;margin:12px 0 16px;line-height:1.7">2000 actions a analyser.<br>Duree estimee: 30-60 min.<br>La page se rechargera automatiquement.</p>
+<div style="font-family:monospace;font-size:13px;color:#00d4aa;background:#0d1520;padding:12px;border-radius:8px;margin-bottom:14px" id="scan-countdown"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-scan').className='modal-bg'">Fermer</button>
+</div></div>
+<div class="guide-page" id="guide-page">
+<div class="guide-header">
+<div class="guide-title">&#128218; Guide des indicateurs</div>
+<button class="hbtn hbtn-cfg" onclick="closeGuide()" style="color:#64748b;border-color:#64748b44">&#10005; Fermer</button>
+</div>
+<div class="guide-wrap">
+<div class="guide-cat">&#128200; Indicateurs Techniques — Momentum & Tendance</div>
+<div class="guide-grid">
+<div class="guide-card">
+<div class="gc-title">RSI <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Relative Strength Index (14 jours). Mesure la vitesse et l'amplitude des variations de prix. Oscille entre 0 et 100.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Survente &le;30 (+28pts)</span>
+  <span class="zone zone-y">Zone &le;45 (+18pts)</span>
+  <span class="zone zone-r">Surachat &ge;70</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="280" height="80" fill="none"/>
+  <rect x="0" y="60" width="280" height="20" fill="#10b98110" rx="2"/>
+  <rect x="0" y="0" width="280" height="14" fill="#ef444410" rx="2"/>
+  <text x="2" y="10" fill="#ef4444" font-size="7" font-family="monospace">Surachat 70+</text>
+  <text x="2" y="74" fill="#10b981" font-size="7" font-family="monospace">Survente -30</text>
+  <line x1="0" y1="14" x2="280" y2="14" stroke="#ef444430" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="0" y1="60" x2="280" y2="60" stroke="#10b98130" stroke-width="1" stroke-dasharray="3,3"/>
+  <polyline points="0,40 30,38 55,50 80,65 110,68 140,55 165,42 190,28 210,10 235,18 260,35 280,40"
+    fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="110" cy="68" r="4" fill="#10b981"/>
+  <text x="95" y="58" fill="#10b981" font-size="8" font-family="monospace">Signal !</text>
+  <circle cx="210" cy="10" r="4" fill="#ef4444"/>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">MACD <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Moving Average Convergence Divergence (12/26/9). Croisement ligne MACD au-dessus du signal = momentum haussier.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Histo &gt;0 + croisement (+20pts)</span>
+  <span class="zone zone-y">Histo &gt;0 (+12pts)</span>
+  <span class="zone zone-r">Histo negatif</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="40" x2="280" y2="40" stroke="#1e2d45" stroke-width="1"/>
+  <rect x="10" y="44" width="12" height="10" fill="#ef444460" rx="1"/>
+  <rect x="26" y="46" width="12" height="8" fill="#ef444460" rx="1"/>
+  <rect x="42" y="43" width="12" height="11" fill="#ef444460" rx="1"/>
+  <rect x="58" y="38" width="12" height="4" fill="#10b98160" rx="1"/>
+  <rect x="74" y="32" width="12" height="8" fill="#10b98160" rx="1"/>
+  <rect x="90" y="28" width="12" height="12" fill="#10b98160" rx="1"/>
+  <rect x="106" y="25" width="12" height="15" fill="#10b98160" rx="1"/>
+  <rect x="122" y="30" width="12" height="10" fill="#10b98160" rx="1"/>
+  <rect x="138" y="36" width="12" height="4" fill="#10b98160" rx="1"/>
+  <rect x="154" y="41" width="12" height="6" fill="#ef444460" rx="1"/>
+  <rect x="170" y="43" width="12" height="9" fill="#ef444460" rx="1"/>
+  <polyline points="16,52 32,54 48,50 64,40 80,34 96,32 112,29 128,33 144,38 160,45 176,50"
+    fill="none" stroke="#00d4aa" stroke-width="1.5"/>
+  <polyline points="16,54 32,55 48,53 64,44 80,37 96,34 112,31 128,35 144,40 160,46 176,51"
+    fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="200" y="36" fill="#00d4aa" font-size="8" font-family="monospace">MACD</text>
+  <text x="200" y="47" fill="#f59e0b" font-size="8" font-family="monospace">Signal</text>
+  <circle cx="64" cy="40" r="4" fill="#10b981"/>
+  <text x="54" y="30" fill="#10b981" font-size="8" font-family="monospace">Cross!</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Stochastique %K <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Oscillateur (14,3). Compare le cours de cloture a la fourchette High/Low. Tres efficace pour les points de retournement.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Survente &le;20 (+14pts)</span>
+  <span class="zone zone-y">Zone &le;30 (+9pts)</span>
+  <span class="zone zone-r">Surachat &ge;80</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="280" height="12" fill="#ef444410" rx="2"/>
+  <rect x="0" y="66" width="280" height="14" fill="#10b98110" rx="2"/>
+  <text x="2" y="9" fill="#ef4444" font-size="7" font-family="monospace">Surachat 80+</text>
+  <text x="2" y="76" fill="#10b981" font-size="7" font-family="monospace">Survente -20</text>
+  <line x1="0" y1="12" x2="280" y2="12" stroke="#ef444430" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="0" y1="66" x2="280" y2="66" stroke="#10b98130" stroke-width="1" stroke-dasharray="3,3"/>
+  <polyline points="0,30 25,20 50,8 80,5 110,15 140,42 165,65 190,72 215,68 240,50 265,35 280,28"
+    fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="80" cy="5" r="4" fill="#ef4444"/>
+  <circle cx="190" cy="72" r="4" fill="#10b981"/>
+  <text x="178" y="63" fill="#10b981" font-size="8" font-family="monospace">Achat</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">CCI <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Commodity Channel Index (20 jours). Mesure l'ecart du prix par rapport a sa moyenne statistique. Valeur negative = survente.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Survente &lt;-100 (+18pts)</span>
+  <span class="zone zone-y">Tendance 50-150 (+12pts)</span>
+  <span class="zone zone-r">Surachat &gt;200</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="40" x2="280" y2="40" stroke="#1e2d45" stroke-width="1"/>
+  <line x1="0" y1="20" x2="280" y2="20" stroke="#f59e0b20" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="0" y1="60" x2="280" y2="60" stroke="#10b98120" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="2" y="18" fill="#f59e0b" font-size="7" font-family="monospace">+100</text>
+  <text x="2" y="58" fill="#10b981" font-size="7" font-family="monospace">-100</text>
+  <polyline points="0,35 30,30 55,22 80,18 105,25 130,38 155,52 180,65 205,68 230,55 255,42 280,36"
+    fill="none" stroke="#00d4aa" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="205" cy="68" r="4" fill="#10b981"/>
+  <text x="192" y="58" fill="#10b981" font-size="8" font-family="monospace">Signal</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">ADX <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Average Directional Index (14j). Mesure la force de la tendance (sans sa direction). ADX &gt;20 = tendance etablie, &gt;40 = forte tendance.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Tendance &ge;20 (+5pts bonus)</span>
+  <span class="zone zone-y">Faible &lt;20</span>
+  <span class="zone zone-r">Pas de tendance &lt;10</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="50" x2="280" y2="50" stroke="#f59e0b30" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="2" y="47" fill="#f59e0b" font-size="7" font-family="monospace">ADX 20 — seuil tendance</text>
+  <polyline points="0,68 30,65 60,60 90,55 120,48 150,40 180,32 210,28 240,26 270,25 280,25"
+    fill="none" stroke="#00d4aa" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="120" cy="48" r="4" fill="#f59e0b"/>
+  <text x="108" y="40" fill="#f59e0b" font-size="8" font-family="monospace">Seuil!</text>
+  <text x="200" y="20" fill="#10b981" font-size="8" font-family="monospace">Tendance forte</text>
+  <text x="10" y="78" fill="#64748b" font-size="8" font-family="monospace">Consolidation</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Bandes de Bollinger <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">MM20 +/- 2 ecarts-types. Le score BB (0-100%) positionne le cours entre la bande basse (0%) et haute (100%). &lt;20% = survente potentielle.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Proche bande basse &lt;20%</span>
+  <span class="zone zone-y">Zone centrale</span>
+  <span class="zone zone-r">Proche bande haute &gt;80%</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <polyline points="0,55 40,52 80,42 120,30 160,22 200,30 240,45 280,55"
+    fill="none" stroke="#1e2d45" stroke-width="1" stroke-dasharray="3,2"/>
+  <polyline points="0,38 40,35 80,28 120,20 160,14 200,20 240,33 280,40"
+    fill="none" stroke="#3b82f630" stroke-width="1"/>
+  <polyline points="0,65 40,62 80,56 120,46 160,38 200,44 240,58 280,65"
+    fill="none" stroke="#3b82f630" stroke-width="1"/>
+  <polyline points="0,60 40,58 80,53 120,44 160,40 200,42 240,54 280,62"
+    fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="40" cy="58" r="3.5" fill="#10b981"/>
+  <text x="28" y="50" fill="#10b981" font-size="8" font-family="monospace">BB bas</text>
+  <text x="5" y="34" fill="#3b82f6" font-size="7" font-family="monospace">Bande haute</text>
+  <text x="5" y="70" fill="#3b82f6" font-size="7" font-family="monospace">Bande basse</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">MM20 / MM50 / MM200 <span class="gc-badge badge-tech">Technique</span></div>
+<div class="gc-desc">Moyennes mobiles simples sur 20, 50 et 200 jours. Cours au-dessus des 3 moyennes = tendance haussiere confirmee (+15pts).</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Au-dessus des 3 MM (+15pts)</span>
+  <span class="zone zone-y">Au-dessus de 2 MM (+8pts)</span>
+  <span class="zone zone-r">En dessous</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <polyline points="0,65 30,62 60,55 90,48 120,40 150,33 180,28 210,25 240,23 270,21"
+    fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polyline points="0,60 30,56 60,50 90,43 120,36 150,30 180,26 210,23 240,21 270,19"
+    fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+  <polyline points="0,55 30,50 60,44 90,37 120,31 150,26 180,22 210,19 240,17 270,15"
+    fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+  <polyline points="0,52 30,47 60,40 90,33 120,27 150,22 180,18 210,15 240,12 270,10"
+    fill="none" stroke="#10b981" stroke-width="2"/>
+  <text x="215" y="28" fill="#64748b" font-size="7" font-family="monospace">MM200</text>
+  <text x="215" y="18" fill="#f59e0b" font-size="7" font-family="monospace">MM50</text>
+  <text x="215" y="10" fill="#3b82f6" font-size="7" font-family="monospace">MM20</text>
+  <text x="215" y="7" fill="#10b981" font-size="7" font-family="monospace">Prix</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Williams %R <span class="gc-badge badge-tech">Nouveau</span></div>
+<div class="gc-desc">Oscillateur de Larry Williams (14j). Similaire au Stochastique, oscille entre -100 et 0. Tres negatif = cours proche du plus bas = opportunite.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Survente &le;-80 (+8pts)</span>
+  <span class="zone zone-y">Zone &le;-60 (+4pts)</span>
+  <span class="zone zone-r">Surachat &ge;-20</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="280" height="12" fill="#ef444410" rx="2"/>
+  <rect x="0" y="66" width="280" height="14" fill="#10b98110" rx="2"/>
+  <text x="2" y="9" fill="#ef4444" font-size="7" font-family="monospace">Surachat -20</text>
+  <text x="2" y="76" fill="#10b981" font-size="7" font-family="monospace">Survente -80</text>
+  <line x1="0" y1="12" x2="280" y2="12" stroke="#ef444430" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="0" y1="66" x2="280" y2="66" stroke="#10b98130" stroke-width="1" stroke-dasharray="3,3"/>
+  <polyline points="0,28 25,18 50,8 80,6 110,18 140,38 170,60 195,72 220,68 248,50 270,33 280,26"
+    fill="none" stroke="#ec4899" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="80" cy="6" r="4" fill="#ef4444"/>
+  <circle cx="195" cy="72" r="4" fill="#10b981"/>
+  <text x="182" y="62" fill="#10b981" font-size="8" font-family="monospace">Signal</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Rate of Change (RoC) <span class="gc-badge badge-tech">Nouveau</span></div>
+<div class="gc-desc">Variation en % du cours sur 12 periodes. Mesure la vitesse du mouvement. RoC positif et croissant = acceleration haussiere.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">RoC &gt;+5% (+5pts bonus)</span>
+  <span class="zone zone-y">0 a +5%</span>
+  <span class="zone zone-r">RoC negatif</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+  <line x1="0" y1="40" x2="280" y2="40" stroke="#1e2d45" stroke-width="1"/>
+  <line x1="0" y1="30" x2="280" y2="30" stroke="#10b98120" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="2" y="28" fill="#10b981" font-size="7" font-family="monospace">+5%</text>
+  <polyline points="0,45 30,48 60,52 90,55 110,50 130,42 155,33 175,27 200,24 225,22 255,25 280,30"
+    fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="0" y="40" width="280" height="40" fill="#ef444408"/>
+  <rect x="0" y="0" width="280" height="40" fill="#10b98108"/>
+  <circle cx="155" cy="33" r="3.5" fill="#10b981"/>
+  <text x="143" y="25" fill="#10b981" font-size="8" font-family="monospace">Accel.</text>
+</svg>
+</div>
+</div>
+<div class="guide-cat">&#128202; Valorisation — Prix vs Valeur Intrinseque</div>
+<div class="guide-grid">
+<div class="guide-card">
+<div class="gc-title">PER <span class="gc-badge badge-value">Valorisation</span></div>
+<div class="gc-desc">Price-to-Earnings Ratio. Combien de fois les investisseurs paient les benefices annuels. Varie fortement selon le secteur.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;10 (+40pts)</span>
+  <span class="zone zone-y">&le;15 (+28pts) / &le;30 (+15pts)</span>
+  <span class="zone zone-r">&gt;30 (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="15" width="55" height="40" fill="#10b98130" rx="4" stroke="#10b98150" stroke-width="1"/>
+  <rect x="70" y="20" width="55" height="35" fill="#f59e0b20" rx="4" stroke="#f59e0b40" stroke-width="1"/>
+  <rect x="135" y="28" width="55" height="27" fill="#f59e0b10" rx="4" stroke="#f59e0b30" stroke-width="1"/>
+  <rect x="200" y="38" width="55" height="17" fill="#ef444420" rx="4" stroke="#ef444440" stroke-width="1"/>
+  <text x="22" y="60" fill="#10b981" font-size="9" font-family="monospace" text-anchor="middle">PER 10</text>
+  <text x="97" y="60" fill="#f59e0b" font-size="9" font-family="monospace" text-anchor="middle">PER 15</text>
+  <text x="162" y="60" fill="#f59e0b" font-size="9" font-family="monospace" text-anchor="middle">PER 30</text>
+  <text x="227" y="60" fill="#ef4444" font-size="9" font-family="monospace" text-anchor="middle">PER 50+</text>
+  <text x="22" y="30" fill="#10b981" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">40pts</text>
+  <text x="97" y="35" fill="#f59e0b" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">28pts</text>
+  <text x="162" y="42" fill="#f59e0b" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">15pts</text>
+  <text x="227" y="50" fill="#ef4444" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">0pt</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">P/Book (PBV) <span class="gc-badge badge-value">Valorisation</span></div>
+<div class="gc-desc">Price-to-Book Value. Rapport entre capitalisation boursiere et valeur comptable des actifs nets. PBV &lt;1 = decote sur actifs.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;1 (+30pts) — Decote actifs</span>
+  <span class="zone zone-y">&le;2 (+20pts) / &le;8 (+10pts)</span>
+  <span class="zone zone-r">&gt;8 (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <rect x="20" y="10" width="240" height="40" fill="#1e2d45" rx="4"/>
+  <rect x="20" y="10" width="120" height="40" fill="#10b98120" rx="4"/>
+  <line x1="140" y1="10" x2="140" y2="50" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="80" y="34" fill="#10b981" font-size="9" font-family="monospace" font-weight="bold" text-anchor="middle">Valeur comptable</text>
+  <text x="200" y="34" fill="#64748b" font-size="9" font-family="monospace" text-anchor="middle">Prime de marche</text>
+  <text x="20" y="62" fill="#10b981" font-size="8" font-family="monospace">PBV=1</text>
+  <text x="105" y="62" fill="#f59e0b" font-size="8" font-family="monospace">PBV=2</text>
+  <text x="230" y="62" fill="#ef4444" font-size="8" font-family="monospace">PBV=8+</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">EV/EBITDA <span class="gc-badge badge-value">Valorisation</span></div>
+<div class="gc-desc">Enterprise Value / Benefices avant interets, impots et amortissements. Indifferent a la structure financiere, ideal pour comparer inter-secteurs.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;8 (+30pts) — Tres bon marche</span>
+  <span class="zone zone-y">&le;12 (+20pts) / &le;15 (+10pts)</span>
+  <span class="zone zone-r">&gt;15 (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="12" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">Valeur Entreprise = Capitalisation + Dette - Cash</text>
+  <rect x="5" y="20" width="60" height="36" fill="#10b98130" rx="4"/>
+  <rect x="75" y="25" width="60" height="30" fill="#f59e0b20" rx="4"/>
+  <rect x="145" y="30" width="60" height="25" fill="#f59e0b10" rx="4"/>
+  <rect x="215" y="40" width="55" height="15" fill="#ef444420" rx="4"/>
+  <text x="35" y="42" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">EV/E &le;8</text>
+  <text x="105" y="44" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">EV/E &le;12</text>
+  <text x="175" y="46" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">EV/E &le;15</text>
+  <text x="242" y="52" fill="#ef4444" font-size="8" font-family="monospace" text-anchor="middle">&gt;15</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">P/S (Price-to-Sales) <span class="gc-badge badge-value">Nouveau</span></div>
+<div class="gc-desc">Capitalisation / Chiffre d'affaires. Utile quand le PER n'est pas disponible (entreprises en croissance, pertes temporaires). Moins sensible aux manipulations comptables.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;1 (+10pts)</span>
+  <span class="zone zone-y">&le;2 (+6pts) / &le;4 (+3pts)</span>
+  <span class="zone zone-r">&gt;4 (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="12" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">Capitalisation boursiere / Chiffre d'affaires annuel</text>
+  <rect x="5" y="20" width="60" height="36" fill="#10b98130" rx="4"/>
+  <rect x="75" y="28" width="60" height="28" fill="#f59e0b20" rx="4"/>
+  <rect x="145" y="35" width="60" height="21" fill="#f59e0b10" rx="4"/>
+  <rect x="215" y="45" width="55" height="11" fill="#ef444420" rx="4"/>
+  <text x="35" y="42" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">P/S &le;1</text>
+  <text x="105" y="45" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">P/S &le;2</text>
+  <text x="175" y="50" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">P/S &le;4</text>
+  <text x="242" y="55" fill="#ef4444" font-size="8" font-family="monospace" text-anchor="middle">&gt;4</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">P/FCF <span class="gc-badge badge-value">Nouveau</span></div>
+<div class="gc-desc">Price-to-Free Cash Flow. Capitalisation / flux de tresorerie disponible. Plus fiable que le PER car difficile a manipuler comptablement. FCF = cash vraiment genere.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;10 (+10pts)</span>
+  <span class="zone zone-y">&le;20 (+6pts) / &le;30 (+3pts)</span>
+  <span class="zone zone-r">&gt;30 ou FCF negatif</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="5" y="12" fill="#64748b" font-size="8" font-family="monospace">Benefice net vs Free Cash Flow (FCF)</text>
+  <rect x="5" y="18" width="80" height="14" fill="#f59e0b30" rx="3"/>
+  <rect x="5" y="36" width="58" height="14" fill="#10b98130" rx="3"/>
+  <text x="45" y="29" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">Benefice net</text>
+  <text x="34" y="47" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">FCF reel</text>
+  <text x="115" y="25" fill="#64748b" font-size="8" font-family="monospace">Amortissements,</text>
+  <text x="115" y="35" fill="#64748b" font-size="8" font-family="monospace">provisions, BFR...</text>
+  <text x="5" y="66" fill="#10b981" font-size="8" font-family="monospace">P/FCF &le;10 = excellent</text>
+  <text x="150" y="66" fill="#ef4444" font-size="8" font-family="monospace">FCF &lt;0 = attention</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Graham Number <span class="gc-badge badge-value">Nouveau</span></div>
+<div class="gc-desc">Valeur intrinseque selon Benjamin Graham: sqrt(22.5 x BPA x VNC/action). Le score affiche l'ecart en % entre la valeur Graham et le cours actuel. Positif = sous-evalue.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">Cours &lt; Graham de 20%+ (+15pts)</span>
+  <span class="zone zone-y">Cours &lt; Graham (+10pts)</span>
+  <span class="zone zone-r">Cours &gt; Graham (surevalu)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="11" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">Graham = sqrt(22.5 x BPA x Valeur Comptable)</text>
+  <line x1="40" y1="20" x2="240" y2="20" stroke="#00d4aa" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="243" y="23" fill="#00d4aa" font-size="8" font-family="monospace">Graham</text>
+  <circle cx="90" cy="45" r="5" fill="#10b981"/>
+  <text x="80" y="62" fill="#10b981" font-size="8" font-family="monospace">Sous-evalue</text>
+  <circle cx="180" cy="14" r="5" fill="#ef4444"/>
+  <text x="165" y="62" fill="#ef4444" font-size="8" font-family="monospace">Sur-evalue</text>
+  <line x1="90" y1="20" x2="90" y2="45" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="180" y1="14" x2="180" y2="20" stroke="#ef4444" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="92" y="35" fill="#10b981" font-size="8" font-family="monospace">-25%</text>
+  <text x="182" y="18" fill="#ef4444" font-size="8" font-family="monospace">+30%</text>
+</svg>
+</div>
+</div>
+<div class="guide-cat">&#127807; Croissance & Qualite du Bilan</div>
+<div class="guide-grid">
+<div class="guide-card">
+<div class="gc-title">ROE <span class="gc-badge badge-growth">Croissance</span></div>
+<div class="gc-desc">Return on Equity. Benefice net / Capitaux propres. Mesure l'efficacite avec laquelle l'entreprise genere du profit pour ses actionnaires. Warren Buffett vise &gt;20%.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&ge;25% (+35pts)</span>
+  <span class="zone zone-y">&ge;15% (+25pts) / &ge;8% (+12pts)</span>
+  <span class="zone zone-r">&lt;8% (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="5" y="12" fill="#64748b" font-size="8" font-family="monospace">ROE = Benefice Net / Capitaux Propres x 100</text>
+  <rect x="5" y="22" width="30" height="40" fill="#1e2d45" rx="3"/>
+  <rect x="5" y="22" width="30" height="40" fill="none" stroke="#1e2d4580" stroke-width="1" rx="3"/>
+  <rect x="5" y="38" width="30" height="24" fill="#10b98130" rx="3"/>
+  <text x="20" y="60" fill="#10b981" font-size="7" font-family="monospace" text-anchor="middle">Bnf</text>
+  <rect x="45" y="18" width="30" height="44" fill="#1e2d45" rx="3"/>
+  <rect x="45" y="36" width="30" height="26" fill="#10b98130" rx="3"/>
+  <rect x="85" y="15" width="30" height="47" fill="#1e2d45" rx="3"/>
+  <rect x="85" y="40" width="30" height="22" fill="#f59e0b20" rx="3"/>
+  <rect x="125" y="30" width="30" height="32" fill="#1e2d45" rx="3"/>
+  <rect x="125" y="50" width="30" height="12" fill="#ef444420" rx="3"/>
+  <text x="20" y="17" fill="#10b981" font-size="7" font-family="monospace" text-anchor="middle">ROE 30%</text>
+  <text x="60" y="13" fill="#10b981" font-size="7" font-family="monospace" text-anchor="middle">ROE 25%</text>
+  <text x="100" y="10" fill="#f59e0b" font-size="7" font-family="monospace" text-anchor="middle">ROE 15%</text>
+  <text x="140" y="25" fill="#ef4444" font-size="7" font-family="monospace" text-anchor="middle">ROE 8%</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">PEG Ratio <span class="gc-badge badge-growth">Croissance</span></div>
+<div class="gc-desc">PER / Taux de croissance des benefices. Corrige le PER de la croissance. PEG &lt;1 = action sous-evaluee par rapport a sa croissance (Peter Lynch).</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;1 (+25pts) — Sous-evalue</span>
+  <span class="zone zone-y">&le;1.5 (+15pts) / &le;2.5 (+8pts)</span>
+  <span class="zone zone-r">&gt;2.5 (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="11" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">PEG = PER / Croissance benefices (%)</text>
+  <rect x="5" y="18" width="82" height="46" fill="#10b98110" rx="4" stroke="#10b98130"/>
+  <rect x="97" y="25" width="82" height="39" fill="#f59e0b10" rx="4" stroke="#f59e0b30"/>
+  <rect x="189" y="38" width="82" height="26" fill="#ef444410" rx="4" stroke="#ef444430"/>
+  <text x="46" y="42" fill="#10b981" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">PEG &le;1</text>
+  <text x="138" y="48" fill="#f59e0b" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">PEG 1-2.5</text>
+  <text x="230" y="55" fill="#ef4444" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">PEG &gt;2.5</text>
+  <text x="46" y="55" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">Sous-evalue</text>
+  <text x="138" y="60" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">Correct</text>
+  <text x="230" y="64" fill="#ef4444" font-size="8" font-family="monospace" text-anchor="middle">Cher</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Current Ratio <span class="gc-badge badge-qual">Qualite</span></div>
+<div class="gc-desc">Actifs courants / Passifs courants. Mesure la capacite de l'entreprise a honorer ses dettes a court terme. Un ratio &lt;1 signifie un risque de liquidite.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&ge;2 (+8pts) — Tres solide</span>
+  <span class="zone zone-y">&ge;1.5 (+5pts) / &ge;1 (+2pts)</span>
+  <span class="zone zone-r">&lt;1 — Risque liquidite</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="11" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">Actifs Courants / Passifs Courants</text>
+  <rect x="20" y="20" width="80" height="40" fill="#10b98120" rx="4" stroke="#10b98140"/>
+  <rect x="130" y="36" width="50" height="24" fill="#1e2d45" rx="4" stroke="#1e2d4580"/>
+  <text x="60" y="42" fill="#10b981" font-size="9" font-family="monospace" text-anchor="middle">Actifs</text>
+  <text x="60" y="52" fill="#10b981" font-size="9" font-family="monospace" text-anchor="middle">Courants</text>
+  <text x="155" y="50" fill="#64748b" font-size="9" font-family="monospace" text-anchor="middle">Passifs</text>
+  <text x="60" y="30" fill="#10b981" font-size="11" font-family="monospace" font-weight="bold" text-anchor="middle">2x</text>
+  <text x="230" y="38" fill="#10b981" font-size="9" font-family="monospace">CR = 2</text>
+  <text x="230" y="50" fill="#10b981" font-size="9" font-family="monospace">Solide !</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Debt/Equity <span class="gc-badge badge-qual">Qualite</span></div>
+<div class="gc-desc">Dette totale / Capitaux propres (en %). Mesure le levier financier. Une dette elevee amplifie les gains ET les pertes. Varie beaucoup selon le secteur.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&le;30% (+10pts) — Peu endetee</span>
+  <span class="zone zone-y">&le;80% (+6pts) / &le;150% (+3pts)</span>
+  <span class="zone zone-r">&gt;150% — Fort levier</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="15" width="60" height="45" fill="#10b98120" rx="4"/>
+  <rect x="5" y="15" width="60" height="12" fill="#10b98140" rx="4"/>
+  <text x="35" y="25" fill="#10b981" font-size="7" font-family="monospace" text-anchor="middle">Dette</text>
+  <text x="35" y="50" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">Capitaux</text>
+  <rect x="80" y="8" width="60" height="52" fill="#f59e0b15" rx="4"/>
+  <rect x="80" y="8" width="60" height="26" fill="#f59e0b30" rx="4"/>
+  <rect x="155" y="5" width="60" height="55" fill="#ef444415" rx="4"/>
+  <rect x="155" y="5" width="60" height="42" fill="#ef444430" rx="4"/>
+  <text x="110" y="44" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">D/E 80%</text>
+  <text x="185" y="55" fill="#ef4444" font-size="8" font-family="monospace" text-anchor="middle">D/E 150%</text>
+  <text x="35" y="68" fill="#10b981" font-size="8" font-family="monospace" text-anchor="middle">D/E 30%</text>
+  <text x="235" y="40" fill="#ef4444" font-size="8" font-family="monospace">Risque</text>
+  <text x="235" y="50" fill="#ef4444" font-size="8" font-family="monospace">eleve</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">FCF Yield <span class="gc-badge badge-qual">Qualite</span></div>
+<div class="gc-desc">Free Cash Flow / Capitalisation boursiere (%). Rendement du flux de tresorerie libre pour l'actionnaire. Comparable a un rendement obligataire mais pour les actions.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&ge;8% (+10pts)</span>
+  <span class="zone zone-y">&ge;5% (+6pts) / &ge;2% (+3pts)</span>
+  <span class="zone zone-r">&lt;2% ou negatif</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="11" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">FCF Yield = Free Cash Flow / Market Cap x 100%</text>
+  <rect x="5" y="18" width="55" height="45" fill="#10b98120" rx="4"/>
+  <rect x="70" y="28" width="55" height="35" fill="#f59e0b20" rx="4"/>
+  <rect x="135" y="38" width="55" height="25" fill="#f59e0b10" rx="4"/>
+  <rect x="200" y="50" width="55" height="13" fill="#ef444420" rx="4"/>
+  <text x="32" y="44" fill="#10b981" font-size="9" font-family="monospace" text-anchor="middle">8%+</text>
+  <text x="97" y="50" fill="#f59e0b" font-size="9" font-family="monospace" text-anchor="middle">5%+</text>
+  <text x="162" y="55" fill="#f59e0b" font-size="9" font-family="monospace" text-anchor="middle">2%+</text>
+  <text x="227" y="60" fill="#ef4444" font-size="9" font-family="monospace" text-anchor="middle">&lt;2%</text>
+</svg>
+</div>
+<div class="guide-card">
+<div class="gc-title">Rendement Dividende <span class="gc-badge badge-div">Dividende</span></div>
+<div class="gc-desc">Dividende annuel / Cours de l'action (%). Revenu passif verse aux actionnaires. Attention: un rendement trop eleve peut signaler une baisse du cours ou un dividende non soutenable.</div>
+<div class="gc-zones">
+  <span class="zone zone-g">&ge;6% (+60pts)</span>
+  <span class="zone zone-y">&ge;4% (+45pts) / &ge;3% (+30pts)</span>
+  <span class="zone zone-r">0% (0pt)</span>
+</div>
+<svg class="gc-svg" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <text x="140" y="11" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">Dividende annuel / Cours x 100%</text>
+  <circle cx="50" cy="42" r="22" fill="#8b5cf618" stroke="#8b5cf640" stroke-width="1.5"/>
+  <circle cx="50" cy="42" r="12" fill="#8b5cf630"/>
+  <text x="50" y="46" fill="#8b5cf6" font-size="9" font-family="monospace" font-weight="bold" text-anchor="middle">6%+</text>
+  <circle cx="130" cy="42" r="16" fill="#f59e0b18" stroke="#f59e0b30" stroke-width="1.5"/>
+  <text x="130" y="46" fill="#f59e0b" font-size="9" font-family="monospace" font-weight="bold" text-anchor="middle">4%+</text>
+  <circle cx="195" cy="42" r="11" fill="#f59e0b10" stroke="#f59e0b20" stroke-width="1"/>
+  <text x="195" y="46" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">3%</text>
+  <circle cx="248" cy="42" r="6" fill="#64748b10" stroke="#64748b30" stroke-width="1"/>
+  <text x="248" y="46" fill="#64748b" font-size="7" font-family="monospace" text-anchor="middle">0%</text>
+  <text x="50" y="70" fill="#8b5cf6" font-size="8" font-family="monospace" text-anchor="middle">60pts</text>
+  <text x="130" y="70" fill="#f59e0b" font-size="8" font-family="monospace" text-anchor="middle">45pts</text>
+</svg>
+</div>
+</div>
+<div style="background:#111827;border:1px solid #8b5cf644;border-radius:12px;padding:20px;margin-top:24px">
+<div style="font-family:monospace;font-size:13px;font-weight:900;color:#8b5cf6;margin-bottom:12px">&#127919; Calcul du Score Global</div>
+<div style="font-size:11px;color:#64748b;line-height:1.8;margin-bottom:14px">
+Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est calcule sur 100 puis pondere.<br>
+<span style="color:#e2e8f0">Score Fond = (Score Value x P.Value + Score Growth x P.Growth + Score Div x P.Div) / (P.Value + P.Growth + P.Div)</span><br>
+<span style="color:#e2e8f0">Score Final = Score Fond x (1 - P.Technique/100) + Score Tech x (P.Technique/100)</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">
+<div style="background:#0d1520;border-radius:8px;padding:10px;text-align:center">
+  <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.7px">Valorisation</div>
+  <div style="font-family:monospace;font-size:18px;font-weight:900;color:#10b981">30%</div>
+  <div style="font-size:9px;color:#64748b">PER, PBV, EV, P/S, P/FCF, Graham</div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px;text-align:center">
+  <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.7px">Croissance</div>
+  <div style="font-family:monospace;font-size:18px;font-weight:900;color:#f59e0b">25%</div>
+  <div style="font-size:9px;color:#64748b">ROE, BPA, PEG, CR, D/E, FCF Yield</div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px;text-align:center">
+  <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.7px">Dividende</div>
+  <div style="font-family:monospace;font-size:18px;font-weight:900;color:#8b5cf6">15%</div>
+  <div style="font-size:9px;color:#64748b">Rendement, Payout Ratio</div>
+</div>
+<div style="background:#0d1520;border-radius:8px;padding:10px;text-align:center">
+  <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.7px">Technique</div>
+  <div style="font-family:monospace;font-size:18px;font-weight:900;color:#3b82f6">30%</div>
+  <div style="font-size:9px;color:#64748b">RSI, MACD, CCI, Stoch, ADX, MM, W%R, RoC</div>
+</div>
+</div>
+</div>
+</div></div>
+<div class="login-screen" id="login-screen">
+<div class="login-box">
+<div class="login-logo">&#128225; Stock Screener</div>
+<div class="login-sub">Acces prive — entrez le code</div>
+<input class="login-input" type="password" id="login-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password">
+<div class="login-err" id="login-err"></div>
+<button class="login-btn" id="login-btn">&#128274; Connexion</button>
+</div></div>
+<div class="wrap">
+<div class="mrow">
+<div class="mbtn on" id="m-combine" onclick="setMode('combine')"><div class="mico">&#127919;</div><div class="mlbl">Fond+Tech</div></div>
+<div class="mbtn" id="m-fond" onclick="setMode('fond')"><div class="mico">&#128202;</div><div class="mlbl">Fondamental</div></div>
+<div class="mbtn" id="m-tech" onclick="setMode('tech')"><div class="mico">&#128200;</div><div class="mlbl">Technique</div></div>
+</div>
+<div class="mdesc" id="mdesc">Mode Combine: score fondamentaux + technique.</div>
+<div class="filters">
+<div class="fg"><label>Recherche</label><input type="text" id="q" oninput="render()" placeholder="Ticker..." style="width:120px"></div>
+<div class="fg"><label>Marche</label><select id="mkt" onchange="render()"><option value="all">Tous</option><option value="eu">Europe</option><option value="us">USA</option><option value="ca">Canada</option><option value="other">Autres</option></select></div>
+<div class="fg"><label>Secteur</label><select id="sect" onchange="render()"></select></div>
+<div class="fg"><label>Score min</label><input type="number" id="ms" value="35" min="0" max="100" step="5" onchange="render()" style="width:60px"></div>
+<div class="fg"><label>PEA seul.</label><select id="peaOnly" onchange="render()"><option value="0">Non</option><option value="1">Oui</option></select></div>
+</div>
+<div class="tabs">
+<div class="tab on" id="tab-all" onclick="setTab('all')">Toutes <span class="bdg" id="b-all">0</span></div>
+<div class="tab" id="tab-pea" onclick="setTab('pea')">PEA <span class="bdg" id="b-pea">0</span></div>
+<div class="tab" id="tab-div" onclick="setTab('div')">&#9888; Divergences <span class="bdg" id="b-div">0</span></div>
+<div class="tab" id="tab-opp" onclick="setTab('opp')">&#127919; Top 20 <span class="bdg" id="b-opp">20</span></div>
+<div class="tab" id="tab-wl" onclick="setTab('wl')">&#11088; WL <span class="bdg" id="b-wl">0</span></div>
+<div class="tab" id="tab-new" onclick="setTab('new')">&#127381; Nouveaux <span class="bdg" id="b-new">0</span></div>
+<div class="tab" id="tab-dash" onclick="setTab('dash')">&#128202; Dashboard <span class="bdg" id="b-dash" style="display:none"></span></div></div>
+<div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
+</div>
+<div style="display:block;width:100%;margin-bottom:6px"><button onclick="toggleAdvSearch()" style="background:#0d1520;border:1px solid #1e2d45;color:#64748b;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:monospace">&#128269; Recherche avancee</button></div>
+<div class="adv-search" id="adv-search">
+<div class="adv-row"><span class="adv-lbl">RSI</span><select class="adv-op" id="adv-rsi-op"><option value="lt">&lt;</option><option value="gt">&gt;</option></select><input type="number" class="adv-val" id="adv-rsi-val" placeholder="45"></div>
+<div class="adv-row"><span class="adv-lbl">Score V</span><select class="adv-op" id="adv-sv-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-sv-val" placeholder="50"></div>
+<div class="adv-row"><span class="adv-lbl">Div%</span><select class="adv-op" id="adv-div-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-div-val" placeholder="3"></div>
+<div class="adv-row"><span class="adv-lbl">Graham%</span><select class="adv-op" id="adv-gr-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-gr-val" placeholder="0"></div>
+<button onclick="applyAdvSearch()" style="background:#00d4aa;color:#000;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:700">Appliquer</button>
+<button onclick="clearAdvSearch()" style="background:#1e2d45;color:#64748b;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px">Reset</button>
+</div>
+<div style="display:block;width:100%"><div class="ssf">
+<span class="ssf-lbl">Filtres scores:</span>
+<div class="ssf-item"><label>Value&ge;</label><input type="number" id="f-sv" value="0" min="0" max="100" step="5" onchange="render()"></div>
+<div class="ssf-item"><label>Growth&ge;</label><input type="number" id="f-sg" value="0" min="0" max="100" step="5" onchange="render()"></div>
+<div class="ssf-item"><label>Div&ge;</label><input type="number" id="f-sd" value="0" min="0" max="100" step="5" onchange="render()"></div>
+<div class="ssf-item"><label>Tech&ge;</label><input type="number" id="f-st" value="0" min="0" max="100" step="5" onchange="render()"></div>
+<div class="ssf-item"><label>Mom&ge;</label><input type="number" id="f-smom" value="0" min="0" max="100" step="5" onchange="render()"></div>
+</div></div>
+<div class="wl-alert" id="wl-alert"></div>
+<div class="stale-banner" id="stale-banner">&#9888; Donnees potentiellement perimees — dernier scan: 01/01/2026 07:00. Weekend ou jour ferie ?</div>
+<div class="stats" id="stats"></div>
+<div class="tw" style="display:block;width:100%"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+<div class="empty" id="empty" style="display:none">Aucun resultat</div></div></div>
+<div class="card-list" id="card-list"></div>
+<div id="card-list-opp" style="display:none;padding:0 4px"></div>
+<div id="dash-view" style="display:none;padding:4px"></div>
+<div class="disc">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
+</div>
+<div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">
+<button class="modal-close" onclick="closeCols()">&#10005;</button>
+<h3>&#9638; Colonnes affichees</h3>
+<div style="font-size:10px;color:#64748b;margin-bottom:10px">Cochez pour afficher. Decochez pour masquer.</div>
+<div class="col-grid" id="col-grid"></div>
+<button class="modal-btn modal-btn-ok" onclick="applyCols()">&#10003; Appliquer</button>
+<button class="modal-btn modal-btn-cancel" onclick="resetCols()" style="margin-top:8px">Reinitialiser par defaut</button>
+</div></div>
+<div class="modal-bg" id="modal-cmp"><div class="modal" style="max-width:700px">
+<button class="modal-close" onclick="closeComparator()">&#10005;</button>
+<h3>&#9878; Comparateur</h3>
+<div id="cmp-content"></div>
+<button class="modal-btn modal-btn-cancel" onclick="closeComparator()" style="margin-top:12px">Fermer</button>
+</div></div>
+<script>
+(function(){
+  var HASH="%%PWD_HASH%%";
+  function tryLogin(){
+    var pwd=document.getElementById("login-pwd").value;
+    var err=document.getElementById("login-err");
+    if(!pwd){err.textContent="Entrez un code.";return;}
+    err.textContent="...";
+    crypto.subtle.digest("SHA-256",new TextEncoder().encode(pwd))
+    .then(function(buf){
+      var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+      if(hex===HASH){document.getElementById("login-screen").style.display="none";}
+      else{err.textContent="Code incorrect.";document.getElementById("login-pwd").value="";document.getElementById("login-pwd").focus();}
+    }).catch(function(e){err.textContent="Erreur: "+e.message;});
+  }
+  window.addEventListener("DOMContentLoaded",function(){
+    var btn=document.getElementById("login-btn");
+    var inp=document.getElementById("login-pwd");
+    if(btn)btn.onclick=tryLogin;
+    if(inp)inp.onkeydown=function(e){if(e.key==="Enter")tryLogin();};
+  });
+})();
+
+var RAW_ORIG=%%DATA%%;
+var CFG=%%CFG%%;
+var IMP_DATA=null;
+var SCAN_DATE="%%DATE%%";
+var NSCAN=%%NSCAN%%;
+var GH_OWNER="VOTRE_USERNAME";
+var GH_REPO="screener";
+var GH_TOKEN="VOTRE_GH_TOKEN";
+
+function openYahoo(tk){window.open('https://finance.yahoo.com/quote/'+tk,'_blank');}
+
+var mode="combine",curTab="all";
+var sortCols=[{col:"score",dir:-1}];
+var CMP_SET={};
+var USER_COLS=null;
+
+// All available columns definition
+var ALL_COLS_DEF={
+  fond:['ticker','spark','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','smom','score','divergence'],
+  tech:['ticker','spark','prix','rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc','st','smom','signaux'],
+  combine:['ticker','spark','prix','per','roe','div','rsi','macd','cci','mm200','graham','fcfy','sv','st','smom','score','divergence','signaux']
+};
+var CL={ticker:'Action',spark:'Cours 60j',prix:'Cours',per:'PER',pbv:'P/Book',roe:'ROE%',marge:'Marge%',div:'Div%',bpa:'BPA%',ev:'EV/EBITDA',peg:'PEG',ps:'P/S',pfcf:'P/FCF',graham:'Graham%',cr:'Curr.R',de:'D/E%',fcfy:'FCF Yld',sv:'Score V',sg:'Score G',sd:'Score D',st:'Score T',smom:'Momentum',score:'Score',divergence:'Diverg.',rsi:'RSI',macd:'MACD',cci:'CCI',stoch:'Stoch',adx:'ADX',mm20:'MM20%',mm50:'MM50%',mm200:'MM200%',willr:'W%R',roc:'RoC%',signaux:'Signaux'};
+
+// localStorage helpers
+var LS_KEY='screener_prefs_v3';
+function savePrefs(){
+  try{
+    localStorage.setItem(LS_KEY,JSON.stringify({
+      cfg:CFG, sortCols:sortCols, userCols:USER_COLS,
+      theme:document.body.classList.contains('light')?'light':'dark',
+      // filtres non sauvegardes (reset a chaque session)
+    }));
+  }catch(e){}
+}
+function loadPrefs(){
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(!raw)return;
+    var p=JSON.parse(raw);
+    if(p.cfg&&typeof p.cfg==='object')Object.assign(CFG,p.cfg);
+    if(Array.isArray(p.sortCols)&&p.sortCols.length)sortCols=p.sortCols;
+    if(p.userCols&&typeof p.userCols==='object')USER_COLS=p.userCols;
+    if(p.theme==='light')document.body.classList.add('light');
+    if(p.theme==='light')document.documentElement.classList.add('light');
+    var msEl=document.getElementById('ms');if(msEl)msEl.value=CFG.scoreMin;
+    // Note: filtres (secteur, marche, recherche) non restaures intentionnellement
+  }catch(e){
+    try{localStorage.removeItem(LS_KEY);}catch(e2){}
+  }
+}
+
+// Freshness check
+function checkFreshness(){
+  try{
+    var parts=SCAN_DATE.split(/[/ :]/);
+    var d=new Date(parts[2],parts[1]-1,parts[0],parseInt(parts[3])||7,parseInt(parts[4])||0);
+    var diff=(Date.now()-d)/3600000;
+    var el=document.getElementById('stale-banner');
+    if(diff>72&&el)el.style.display='flex';
+  }catch(e){}
+}
+checkFreshness();
+
+function buildSects(){
+  var s=['all'],i,o;
+  for(i=0;i<RAW_ORIG.length;i++){if(RAW_ORIG[i].secteur&&s.indexOf(RAW_ORIG[i].secteur)===-1)s.push(RAW_ORIG[i].secteur);}
+  s.sort();
+  var se=document.getElementById('sect'); se.innerHTML='';
+  for(i=0;i<s.length;i++){o=document.createElement('option');o.value=s[i];o.text=s[i]==='all'?'Tous secteurs':s[i];se.appendChild(o);}
+}
+buildSects();
+loadPrefs();
+
+function nextUpdate(){
+  var now=new Date(),nxt=new Date();
+  nxt.setDate(now.getDate()+(now.getHours()>=7?1:0));nxt.setHours(7,0,0,0);
+  var diff=nxt-now,h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);
+  var el=document.getElementById('nxt');if(el)el.textContent='Scan auto: '+h+'h'+m+'m';
+}
+nextUpdate();setInterval(nextUpdate,60000);
+
+// Theme
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  document.documentElement.classList.toggle('light');
+  document.querySelector(':root').style.background=document.body.classList.contains('light')?'#f1f5f9':'#0a0e1a';
+  document.getElementById('theme-btn').textContent=document.body.classList.contains('light')?'\u263D':'\u2600';
+  savePrefs();
+}
+
+var DESCS={combine:'Mode Combine: fondamentaux + technique. Recommande.',fond:'Mode Fondamental: PER, ROE, dividende, croissance.',tech:'Mode Technique: RSI, MACD, CCI, Stochastique, MM.'};
+
+function setMode(m){
+  mode=m;
+  ['combine','fond','tech'].forEach(function(x){document.getElementById('m-'+x).className='mbtn'+(x===m?' on':'');});
+  document.getElementById('mdesc').textContent=DESCS[m];render();
+}
+function setTab(t){
+  curTab=t;
+  ['all','pea','div','imp'].forEach(function(x){var el=document.getElementById('tab-'+x);if(el)el.className='tab'+(x===t?' on':'');});
+  render();
+}
+function openGuide(){document.getElementById('guide-page').className='guide-page open';}
+function closeGuide(){document.getElementById('guide-page').className='guide-page';}
+
+// Scoring functions
+function lsv(r){
+  var p=0;
+  if(CFG.tPer&&r.per)p+=r.per<=10?40:r.per<=15?28:r.per<=CFG.perMax?15:0;
+  if(CFG.tPbv&&r.pbv)p+=r.pbv<=1?30:r.pbv<=2?20:r.pbv<=CFG.pbvMax?10:0;
+  if(CFG.tEv&&r.ev)p+=r.ev<=8?30:r.ev<=12?20:r.ev<=15?10:0;
+  if(CFG.tPs&&r.ps)p+=r.ps<=1?10:r.ps<=2?6:r.ps<=CFG.psMax?3:0;
+  if(CFG.tPfcf&&r.pfcf)p+=r.pfcf<=10?10:r.pfcf<=20?6:r.pfcf<=CFG.pfcfMax?3:0;
+  if(CFG.tGraham&&r.graham!==null&&r.graham!==undefined)p+=r.graham>=(CFG.grahamMin+20)?15:r.graham>=CFG.grahamMin?10:0;
+  return Math.min(100,p);
+}
+function lsg(r){
+  var p=0;
+  if(CFG.tRoe&&r.roe)p+=r.roe>=25?35:r.roe>=15?25:r.roe>=CFG.roeMin?12:0;
+  if(CFG.tBpa&&r.bpa)p+=r.bpa>=25?40:r.bpa>=15?28:r.bpa>0?15:0;
+  if(CFG.tPeg&&r.peg)p+=r.peg<=1?25:r.peg<=1.5?15:r.peg<=2.5?8:0;
+  if(CFG.tCr&&r.cr)p+=r.cr>=(CFG.crMin+1)?8:r.cr>=(CFG.crMin+0.5)?5:r.cr>=CFG.crMin?2:0;
+  if(CFG.tDe&&r.de!==null&&r.de!==undefined)p+=r.de<=30?10:r.de<=80?6:r.de<=CFG.deMax?3:0;
+  if(CFG.tFcfy&&r.fcfy)p+=r.fcfy>=8?10:r.fcfy>=5?6:r.fcfy>=CFG.fcfyMin?3:0;
+  return Math.min(100,p);
+}
+function lsd(r){var p=0;if(r.div)p+=r.div>=6?60:r.div>=4?45:r.div>=3?30:r.div>0?15:0;return Math.min(100,p);}
+function lst(r){
+  var p=0;
+  if(CFG.tRsi&&r.rsi!==null)if(r.rsi<=30)p+=28;else if(r.rsi<=CFG.rsiSurvente)p+=18;else if(r.rsi<=50)p+=8;
+  if(CFG.tMacd&&r.macd!==null)if(r.macd>0)p+=15;else if(r.macd>-0.1)p+=5;
+  if(CFG.tCci&&r.cci!==null)if(r.cci<CFG.cciSurvente)p+=18;else if(r.cci>=50&&r.cci<=150)p+=12;else if(r.cci>0)p+=6;
+  if(CFG.tStoch&&r.stoch!==null)if(r.stoch<=20)p+=14;else if(r.stoch<=CFG.stochSurvente)p+=9;
+  if(CFG.tMm&&r.mm20!==null&&r.mm50!==null&&r.mm200!==null&&r.mm20>0&&r.mm50>0&&r.mm200>0)p+=15;
+  if(CFG.tAdx&&r.adx!==null&&r.adx>=CFG.adxMin)p+=5;
+  if(CFG.tWillr&&r.willr!==null)if(r.willr<=-80)p+=8;else if(r.willr<=CFG.willrSurvente)p+=4;
+  if(CFG.tRoc&&r.roc!==null&&r.roc>=CFG.rocMin)p+=5;
+  return Math.min(100,p);
+}
+function lsmom(r){
+  var p=0;
+  if(r.roc!==null&&r.roc!==undefined)p+=r.roc>10?40:r.roc>5?25:r.roc>0?10:0;
+  if(r.willr!==null&&r.willr!==undefined)p+=r.willr<=-80?35:r.willr<=-60?20:r.willr<=-40?8:0;
+  if(r.macd!==null&&r.macd!==undefined)p+=r.macd>0?25:r.macd>-0.1?10:0;
+  return Math.min(100,p);
+}
+function ls(r){var sv=lsv(r),sg=lsg(r),sd=lsd(r),st=lst(r),tf=CFG.poidsValue+CFG.poidsGrowth+CFG.poidsDividende;return Math.round(Math.round(sv*CFG.poidsValue/tf+sg*CFG.poidsGrowth/tf+sd*CFG.poidsDividende/tf)*(1-CFG.poidsTechnique/100)+st*(CFG.poidsTechnique/100));}
+function getScore(r){if(mode==='fond')return Math.round(lsv(r)*0.4+lsg(r)*0.35+lsd(r)*0.25);if(mode==='tech')return lst(r);return ls(r);}
+
+// Multi-column sort
+function doSort(col){
+  if(sortCols.length>0&&sortCols[0].col===col){
+    sortCols[0].dir*=-1;
+  } else {
+    sortCols=sortCols.filter(function(s){return s.col!==col;});
+    sortCols.unshift({col:col,dir:-1});
+    if(sortCols.length>3)sortCols=sortCols.slice(0,3);
+  }
+  savePrefs();render();
+}
+function compareRows(a,b){
+  for(var i=0;i<sortCols.length;i++){
+    var s=sortCols[i],col=s.col,dir=s.dir;
+    var av,bv;
+    if(col==='score'){av=getScore(a);bv=getScore(b);}
+    else if(col==='smom'){av=lsmom(a);bv=lsmom(b);}
+    else{av=a[col];bv=b[col];}
+    if(av===null||av===undefined){if(bv===null||bv===undefined)continue;return 1;}
+    if(bv===null||bv===undefined)return -1;
+    var na=parseFloat(av),nb=parseFloat(bv);
+    var diff=!isNaN(na)&&!isNaN(nb)?dir*(na-nb):dir*String(av).localeCompare(String(bv));
+    if(diff!==0)return diff;
+  }
+  return 0;
+}
+
+function doFilter(){
+  var q=(document.getElementById('q').value||'').toLowerCase();
+  var mkt=document.getElementById('mkt').value;
+  var sec=document.getElementById('sect').value;
+  var ms=parseFloat(document.getElementById('ms').value)||0;
+  var po=document.getElementById('peaOnly').value==='1';
+  var fsv=parseFloat(document.getElementById('f-sv').value)||0;
+  var fsg=parseFloat(document.getElementById('f-sg').value)||0;
+  var fsd=parseFloat(document.getElementById('f-sd').value)||0;
+  var fst=parseFloat(document.getElementById('f-st').value)||0;
+  var fsmom=parseFloat(document.getElementById('f-smom').value)||0;
+  var src=(curTab==='imp'&&IMP_DATA)?IMP_DATA:RAW_ORIG;
+  var out=[],i,r;
+  for(i=0;i<src.length;i++){
+    r=src[i];
+    if(getScore(r)<ms)continue;
+    if(po&&!r.pea)continue;
+    if(curTab==='pea'&&!r.pea)continue;
+    if(curTab==='div'&&!r.divergence)continue;
+    if(mkt==='eu'&&(r.pays==='US'||r.pays==='CA'||r.pays==='AU'))continue;
+    if(mkt==='us'&&r.pays!=='US')continue;
+    if(mkt==='ca'&&r.pays!=='CA')continue;
+    if(mkt==='other'&&(r.pays==='US'||r.pays==='CA'||r.pays==='FR'||r.pays==='DE'||r.pays==='GB'||r.pays==='NL'||r.pays==='ES'||r.pays==='IT'||r.pays==='CH'))continue;
+    if(sec!=='all'&&r.secteur!==sec)continue;
+    if(q&&r.ticker.toLowerCase().indexOf(q)===-1&&r.nom.toLowerCase().indexOf(q)===-1)continue;
+    if(lsv(r)<fsv||lsg(r)<fsg||lsd(r)<fsd||lst(r)<fst||lsmom(r)<fsmom)continue;
+    out.push(r);
+  }
+  out.sort(compareRows);
+  return out;
+}
+
+// Sparkline SVG renderer
+function sparkSVG(data){
+  if(!data||data.length<2)return '<span style="color:#2a3a52;font-size:9px">-</span>';
+  var w=70,h=22,pts=data,n=pts.length;
+  var xStep=w/(n-1);
+  var coords=pts.map(function(v,i){return [Math.round(i*xStep),Math.round(h-(v/100*h))];});
+  var path=coords.map(function(p,i){return (i===0?'M':'L')+p[0]+' '+p[1];}).join(' ');
+  var last=pts[pts.length-1],first=pts[0];
+  var trend=last>first+5?'#10b981':last<first-5?'#ef4444':'#64748b';
+  var dot=coords[coords.length-1];
+  return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<path d="'+path+'" fill="none" stroke="'+trend+'" stroke-width="1.5" stroke-linejoin="round"/>'
+    +'<circle cx="'+dot[0]+'" cy="'+dot[1]+'" r="2" fill="'+trend+'"/>'
+    +'</svg>';
+}
+
+// Tooltips
+var TIPS={
+  ticker:"Action — Yahoo Finance",
+  spark:"Mini-courbe 60 jours",
+  prix:"Dernier cours",
+  per:"PER: cours/benefice",
+  pbv:"P/Book: cours/valeur comptable",
+  roe:"ROE: benefice/capitaux propres",
+  marge:"Marge nette %",
+  div:"Rendement dividende %",
+  bpa:"Croissance benefices/action",
+  ev:"EV/EBITDA",
+  peg:"PER/croissance. <1 = sous-evalue",
+  ps:"P/S: cours/CA",
+  pfcf:"P/FCF: plus fiable que PER",
+  graham:"Ecart vs valeur Graham",
+  cr:"Current Ratio: liquidite",
+  de:"Debt/Equity: levier",
+  fcfy:"FCF Yield: rendement cash flow",
+  sv:"Score Valorisation /100",
+  sg:"Score Croissance /100",
+  sd:"Score Dividende /100",
+  st:"Score Technique /100",
+  smom:"Score Momentum /100",
+  score:"Score global /100",
+  divergence:"FOND+: fond fort tech faible. TECH+: inverse",
+  rsi:"RSI 14j: <30 survente >70 surachat",
+  macd:"MACD 12/26/9",
+  cci:"CCI 20j: <-100 survente",
+  stoch:"Stoch 14j: <20 survente",
+  adx:"ADX: force tendance",
+  mm20:"Ecart MM20j",
+  mm50:"Ecart MM50j",
+  mm200:"Ecart MM200j",
+  willr:"Williams %R: <-80 survente",
+  roc:"Rate of Change",
+  signaux:"Signaux techniques"
+};
+
+function thLabel(col,sorted,dir,rank){
+  var lbl=CL[col]||col;
+  var tip=TIPS[col]?'<span class="tip-ico">?</span><div class="tip">'+TIPS[col]+'</div>':'';
+  var sortInd=sorted?(dir>0?' ^':' v'):'';
+  var rankBadge=rank>1?'<span class="sort-badge">'+rank+'</span>':'';
+  return '<div class="th-wrap">'+lbl+sortInd+rankBadge+tip+'</div>';
+}
+
+function cH(col,r){
+  var v=r[col];
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea)tg+='<span class="ptag">PEA</span>';
+    if(r._imported)tg+='<span class="imptag">IMP</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var tk=r.ticker.replace(/'/g,"\\'");
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(\''+tk+'\')">'+r.ticker+'</span>'
+      +tg
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(\''+tk+'\',this)">&#9878;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  if(col==='rsi')return v!==null?'<span style="font-family:monospace;font-size:11px;font-weight:'+(v<=45||v>=70?700:400)+';color:'+(v<=30?'#10b981':v<=45?'#f59e0b':v>=70?'#ef4444':'#94a3b8')+'">'+v+'</span>':'-';
+  if(col==='macd')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>0?'#10b981':v<0?'#ef4444':'#94a3b8')+'">'+parseFloat(v).toFixed(2)+'</span>':'-';
+  if(col==='cci')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<-100?'#10b981':v>150?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
+  if(col==='stoch')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<=30?'#10b981':v>=70?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
+  if(col==='adx')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>=25?'#00d4aa':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
+  if(col==='willr')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<=-80?'#10b981':v>=-20?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
+  if(col==='roc')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>5?'#10b981':v>0?'#f59e0b':'#ef4444')+'">'+(v>0?'+':'')+parseFloat(v).toFixed(1)+'%</span>':'-';
+  if(col==='mm20'||col==='mm50'||col==='mm200')return mmC(v);
+  if(col==='signaux'){if(!v)return '-';var ps=v.split('|'),h2='',ii;for(ii=0;ii<ps.length;ii++){var s2=ps[ii].trim();if(s2)h2+='<span class="chip">'+s2+'</span>';}return h2||'-';}
+  return v!==null&&v!==undefined?String(v):'-';
+}
+
+function bH(v){var pct=Math.min(v||0,100),c=pct>=70?'#10b981':pct>=50?'#f59e0b':'#64748b';return '<div class="bw"><div class="br"><div class="bf" style="width:'+pct+'%;background:'+c+'"></div></div><span style="font-family:monospace;font-size:11px;color:'+c+';font-weight:700">'+Math.round(pct)+'</span></div>';}
+function mmC(v){if(v===null||v===undefined)return '<span style="color:#2a3a52">-</span>';var c=v>=0?'#10b981':'#ef4444';return '<span style="font-family:monospace;font-size:11px;color:'+c+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</span>';}
+
+function getActiveCols(){
+  if(USER_COLS&&USER_COLS[mode])return USER_COLS[mode];
+  return ALL_COLS_DEF[mode];
+}
+
+function render(){
+  var data=doFilter(),i,j,r,c,sc;
+  var allN=data.length,peaN=0,divN=0;
+  for(i=0;i<data.length;i++){if(data[i].pea)peaN++;if(data[i].divergence)divN++;}
+  document.getElementById('b-all').textContent=allN;
+  document.getElementById('b-pea').textContent=peaN;
+  document.getElementById('b-div').textContent=divN;
+  var ie=document.getElementById('b-imp');if(ie&&IMP_DATA)ie.textContent=IMP_DATA.length;
+
+  var s70=0,s50=0,sumD=0,cntD=0,rsiLow=0;
+  for(i=0;i<data.length;i++){sc=getScore(data[i]);if(sc>=70)s70++;else if(sc>=50)s50++;if(data[i].div){sumD+=data[i].div;cntD++;}if(data[i].rsi&&data[i].rsi<=45)rsiLow++;}
+  var divFiltered=data.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
+  divFiltered.sort(function(a,b){return a-b;});
+  var avgD='-';
+  if(divFiltered.length){var mid2=Math.floor(divFiltered.length/2);avgD=(divFiltered.length%2?divFiltered[mid2]:((divFiltered[mid2-1]+divFiltered[mid2])/2)).toFixed(1)+'%';}
+  var sd2=[['Total',data.length,'#00d4aa'],['Score 70+',s70,'#10b981'],['Score 50-69',s50,'#f59e0b'],['Div med.',avgD,'#8b5cf6'],['RSI<=45',rsiLow,'#3b82f6']];
+  var sh='';for(i=0;i<sd2.length;i++)sh+='<div class="stat"><div class="sl">'+sd2[i][0]+'</div><div class="sv" style="color:'+sd2[i][2]+'">'+sd2[i][1]+'</div></div>';
+  document.getElementById('stats').innerHTML=sh;
+
+  var cols=getActiveCols();
+  var sortMap={};
+  for(i=0;i<sortCols.length;i++)sortMap[sortCols[i].col]=i+1;
+  var thH='<tr>';
+  for(i=0;i<cols.length;i++){
+    c=cols[i];
+    var isSorted=sortMap[c]>0;
+    var sdir=isSorted?(sortCols[sortMap[c]-1].dir):1;
+    thH+='<th class="'+(isSorted?'sorted':'')+'" data-col="'+ c +'">'+thLabel(c,isSorted,sdir,sortMap[c]||0)+'</th>';
+  }
+  thH+='</tr>';
+  document.getElementById('thead').innerHTML=thH;
+
+  var empty=document.getElementById('empty');
+  if(!data.length){document.getElementById('tbody').innerHTML='';document.getElementById('card-list').innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  var rows='',cards='';
+  for(i=0;i<data.length;i++){
+    rows+='<tr>';
+    for(j=0;j<cols.length;j++)rows+='<td>'+cH(cols[j],data[i])+'</td>';
+    rows+='</tr>';
+    cards+=renderCard(data[i]);
+  }
+  document.getElementById('tbody').innerHTML=rows;
+  document.getElementById('card-list').innerHTML=cards;
+}
+
+// Mobile cards
+function renderCard(r){
+  var sc=getScore(r),mom=lsmom(r);
+  var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
+  var tgs='';if(r.pea)tgs+='<span class="ptag">PEA</span>';if(r._imported)tgs+='<span class="imptag">IMP</span>';
+  if(r.divergence){var dc=r.divergence==='FOND+'?'div-fond':'div-tech';tgs+='<span class="div-badge '+dc+'" style="margin-left:3px">'+r.divergence+'</span>';}
+  var cmpOn=CMP_SET[r.ticker]?'on':'';
+  var wlOn2=WATCHLIST[r.ticker]?'on':'';
+  var delta2=deltaBadge(r);
+  var newBadge=isNew(r)?'<span class="new-badge">NEW</span>':'';
+  var kv=function(k,v){return '<div class="card-kv"><div class="card-k">'+k+'</div><div class="card-v" style="color:#94a3b8">'+v+'</div></div>';};
+  return '<div class="card">'
+    +'<div class="card-top"><div>'
+      +'<span class="card-tk" onclick="openYahoo(this.dataset.tk)" data-tk="'+ r.ticker +'" style="cursor:pointer">'+r.ticker+'</span>'
+      +newBadge+delta2
+      +'<button class="cmp-btn '+cmpOn+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+ r.ticker +'" style="margin-left:4px">&#9878;</button>'
+      +'<button class="star-btn '+wlOn2+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+ r.ticker +'" style="font-size:15px;padding:0 2px">&#11088;</button>'
+      +'<button onclick="openRadar(this.dataset.tk)" data-tk="'+ r.ticker +'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button>'
+    +'</div>'
+    +'<div style="text-align:right"><span class="card-score" style="color:'+c+'">'+sc+'</span>'
+      +(mom>=50?'<div style="font-size:9px;color:#3b82f6;font-family:monospace">Mom:'+mom+'</div>':'')
+    +'</div></div>'
+    +'<div class="card-nom">'+r.nom+'</div>'
+    +'<div class="card-tags">'+tgs+'<span class="ptag" style="background:#3b82f618;color:#3b82f6;border-color:#3b82f633">'+r.secteur+'</span></div>'
+    +(r.sparkline&&r.sparkline.length?'<div style="margin:6px 0">'+sparkSVG(r.sparkline)+'</div>':'')
+    +'<div class="card-grid">'
+      +kv('PER',r.per?parseFloat(r.per).toFixed(1)+'x':'-')
+      +kv('ROE',r.roe?r.roe+'%':'-')
+      +kv('Div',r.div?parseFloat(r.div).toFixed(1)+'%':'-')
+      +kv('RSI',r.rsi||'-')
+      +kv('MM200',r.mm200!==null&&r.mm200!==undefined?(r.mm200>=0?'+':'')+r.mm200+'%':'-')
+      +kv('Graham',r.graham!==null&&r.graham!==undefined?(r.graham>=0?'+':'')+r.graham+'%':'-')
+    +'</div>'
+    +(r.signaux?'<div class="card-sigs">'+r.signaux+'</div>':'')
+  +'</div>';
+}
+
+// Export CSV
+function exportCSV(){
+  var data=doFilter();
+  if(!data.length){alert('Aucune donnee a exporter.');return;}
+  var cols=['ticker','nom','secteur','pays','pea','devise','prix','per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy','sv','sg','sd','st','smom','score','divergence','rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc','signaux'];
+  var lines=[cols.join(';')],i,j,v;
+  for(i=0;i<data.length;i++){
+    var row=[];
+    for(j=0;j<cols.length;j++){
+      if(cols[j]==='score')v=getScore(data[i]);
+      else if(cols[j]==='smom')v=lsmom(data[i]);
+      else v=data[i][cols[j]]!==null&&data[i][cols[j]]!==undefined?data[i][cols[j]]:'';
+      row.push(String(v).replace(/;/g,','));
+    }
+    lines.push(row.join(';'));
+  }
+  var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  var now=new Date();a.download='screener_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.csv';a.click();
+}
+
+// Comparateur
+function toggleCmp(ticker,btn){
+  if(CMP_SET[ticker]){delete CMP_SET[ticker];btn.className='cmp-btn';}
+  else{
+    if(Object.keys(CMP_SET).length>=4){alert('Maximum 4 actions.');return;}
+    var found=RAW_ORIG.filter(function(r){return r.ticker===ticker;});
+    if(found.length)CMP_SET[ticker]=found[0];
+    btn.className='cmp-btn on';
+  }
+  var n=Object.keys(CMP_SET).length;
+  var ob=document.getElementById('cmp-open-btn');
+  if(ob){ob.style.display=n>0?'':'none';document.getElementById('cmp-count').textContent=n;}
+}
+function openComparator(){
+  var tickers=Object.keys(CMP_SET);
+  if(!tickers.length){alert('Selectionnez des actions avec le bouton de comparaison.');return;}
+  var ROWS=[
+    {k:'Score',f:function(r){return getScore(r);}},
+    {k:'Momentum',f:function(r){return lsmom(r);}},
+    {k:'Divergence',f:function(r){return r.divergence||'-';}},
+    {k:'Cours',f:function(r){return r.prix?parseFloat(r.prix).toFixed(2)+' '+r.devise:'-';}},
+    {k:'PER',f:function(r){return r.per?parseFloat(r.per).toFixed(1)+'x':'-';}},
+    {k:'P/Book',f:function(r){return r.pbv?parseFloat(r.pbv).toFixed(1)+'x':'-';}},
+    {k:'EV/EBITDA',f:function(r){return r.ev?parseFloat(r.ev).toFixed(1)+'x':'-';}},
+    {k:'P/S',f:function(r){return r.ps?parseFloat(r.ps).toFixed(1)+'x':'-';}},
+    {k:'P/FCF',f:function(r){return r.pfcf?parseFloat(r.pfcf).toFixed(1)+'x':'-';}},
+    {k:'Graham %',f:function(r){return r.graham!==null&&r.graham!==undefined?(r.graham>=0?'+':'')+r.graham.toFixed(0)+'%':'-';}},
+    {k:'ROE %',f:function(r){return r.roe?r.roe+'%':'-';}},
+    {k:'BPA Croiss.',f:function(r){return r.bpa?r.bpa+'%':'-';}},
+    {k:'PEG',f:function(r){return r.peg?parseFloat(r.peg).toFixed(2):'-';}},
+    {k:'Dividende',f:function(r){return r.div?parseFloat(r.div).toFixed(1)+'%':'-';}},
+    {k:'Current Ratio',f:function(r){return r.cr?parseFloat(r.cr).toFixed(1):'-';}},
+    {k:'D/E %',f:function(r){return r.de!==null&&r.de!==undefined?r.de.toFixed(0)+'%':'-';}},
+    {k:'FCF Yield',f:function(r){return r.fcfy?parseFloat(r.fcfy).toFixed(1)+'%':'-';}},
+    {k:'RSI',f:function(r){return r.rsi||'-';}},
+    {k:'MACD',f:function(r){return r.macd!==null?parseFloat(r.macd).toFixed(2):'-';}},
+    {k:'CCI',f:function(r){return r.cci!==null?Math.round(r.cci):'-';}},
+    {k:'ADX',f:function(r){return r.adx!==null?Math.round(r.adx):'-';}},
+    {k:'MM200 %',f:function(r){return r.mm200!==null&&r.mm200!==undefined?(r.mm200>=0?'+':'')+r.mm200.toFixed(1)+'%':'-';}},
+    {k:'Williams %R',f:function(r){return r.willr!==null?Math.round(r.willr):'-';}},
+    {k:'RoC %',f:function(r){return r.roc!==null?(r.roc>=0?'+':'')+parseFloat(r.roc).toFixed(1)+'%':'-';}},
+    {k:'Score Value',f:function(r){return lsv(r);}},
+    {k:'Score Growth',f:function(r){return lsg(r);}},
+    {k:'Score Div',f:function(r){return lsd(r);}},
+    {k:'Score Tech',f:function(r){return lst(r);}},
+  ];
+  var h='<div class="cmp-header">';
+  for(var t=0;t<tickers.length;t++){var ri=CMP_SET[tickers[t]];h+='<div class="cmp-hcol"><div class="cmp-htk">'+ri.ticker+'</div><div class="cmp-hnom">'+ri.nom+'</div>'+sparkSVG(ri.sparkline)+'</div>';}
+  h+='</div>';
+  var body='';
+  for(var ri2=0;ri2<ROWS.length;ri2++){
+    var vals=[],maxV=-Infinity,minV=Infinity,nums=[];
+    for(var ti=0;ti<tickers.length;ti++){vals.push(ROWS[ri2].f(CMP_SET[tickers[ti]]));}
+    for(var vi=0;vi<vals.length;vi++){var n=parseFloat(vals[vi]);if(!isNaN(n)){nums.push(n);if(n>maxV)maxV=n;if(n<minV)minV=n;}}
+    body+='<div class="cmp-row"><div class="cmp-lbl">'+ROWS[ri2].k+'</div><div class="cmp-vals">';
+    for(var vi2=0;vi2<vals.length;vi2++){
+      var n2=parseFloat(vals[vi2]),col2='#94a3b8';
+      if(!isNaN(n2)&&nums.length>1)col2=n2===maxV?'#10b981':n2===minV?'#ef4444':'#94a3b8';
+      body+='<div class="cmp-val" style="color:'+col2+'">'+vals[vi2]+'</div>';
+    }
+    body+='</div></div>';
+  }
+  document.getElementById('cmp-content').innerHTML=h+body;
+  document.getElementById('modal-cmp').className='modal-bg open';
+}
+function closeComparator(){document.getElementById('modal-cmp').className='modal-bg';}
+
+// Column picker
+function openCols(){
+  var cols=ALL_COLS_DEF[mode];
+  var active=getActiveCols();
+  var grid=document.getElementById('col-grid');grid.innerHTML='';
+  var allKeys=Object.keys(CL);
+  for(var i=0;i<allKeys.length;i++){
+    var col=allKeys[i];
+    var checked=active.indexOf(col)!==-1;
+    var item=document.createElement('div');item.className='col-item'+(checked?' pinned':'');
+    item.innerHTML='<input type="checkbox" id="chk-'+col+'" '+(checked?'checked':'')+'><label for="chk-'+col+'">'+(CL[col]||col)+'</label>';
+    grid.appendChild(item);
+  }
+  document.getElementById('modal-cols').className='modal-bg open';
+}
+function closeCols(){document.getElementById('modal-cols').className='modal-bg';}
+function applyCols(){
+  var allKeys=Object.keys(CL),newCols=[];
+  for(var i=0;i<allKeys.length;i++){var el=document.getElementById('chk-'+allKeys[i]);if(el&&el.checked)newCols.push(allKeys[i]);}
+  if(!newCols.length){alert('Selectionnez au moins une colonne.');return;}
+  if(!USER_COLS)USER_COLS={};
+  USER_COLS[mode]=newCols;
+  savePrefs();closeCols();render();
+}
+function resetCols(){
+  if(!USER_COLS)USER_COLS={};
+  delete USER_COLS[mode];
+  savePrefs();closeCols();render();
+}
+
+// Settings modal
+function openCfg(){
+  document.getElementById('c-per').value=CFG.perMax;document.getElementById('c-pbv').value=CFG.pbvMax;
+  document.getElementById('c-ev').value=15;document.getElementById('c-ps').value=CFG.psMax;
+  document.getElementById('c-pfcf').value=CFG.pfcfMax;document.getElementById('c-graham').value=CFG.grahamMin;
+  document.getElementById('c-roe').value=CFG.roeMin;document.getElementById('c-cr').value=CFG.crMin;
+  document.getElementById('c-de').value=CFG.deMax;document.getElementById('c-fcfy').value=CFG.fcfyMin;
+  document.getElementById('c-rsi').value=CFG.rsiSurvente;document.getElementById('c-stoch').value=CFG.stochSurvente;
+  document.getElementById('c-cci').value=CFG.cciSurvente;document.getElementById('c-adx').value=CFG.adxMin;
+  document.getElementById('c-willr').value=CFG.willrSurvente;document.getElementById('c-roc').value=CFG.rocMin;
+  document.getElementById('c-pv').value=CFG.poidsValue;document.getElementById('c-pg').value=CFG.poidsGrowth;
+  document.getElementById('c-pd').value=CFG.poidsDividende;document.getElementById('c-pt').value=CFG.poidsTechnique;
+  document.getElementById('c-smin').value=CFG.scoreMin;
+  var togs={'per':CFG.tPer,'pbv':CFG.tPbv,'ev':CFG.tEv,'ps':CFG.tPs,'pfcf':CFG.tPfcf,'graham':CFG.tGraham,
+    'roe':CFG.tRoe,'bpa':CFG.tBpa,'peg':CFG.tPeg,'cr':CFG.tCr,'de':CFG.tDe,'fcfy':CFG.tFcfy,
+    'rsi':CFG.tRsi,'macd':CFG.tMacd,'cci':CFG.tCci,'stoch':CFG.tStoch,'mm':CFG.tMm,'adx':CFG.tAdx,'willr':CFG.tWillr,'roc':CFG.tRoc};
+  for(var k in togs){var el=document.getElementById('t-'+k);if(el)el.checked=!!togs[k];}
+  document.getElementById('modal-cfg').className='modal-bg open';
+}
+function closeCfg(){document.getElementById('modal-cfg').className='modal-bg';}
+function applyCfg(){
+  var pv=parseFloat(document.getElementById('c-pv').value)||0,pg=parseFloat(document.getElementById('c-pg').value)||0,
+      pd=parseFloat(document.getElementById('c-pd').value)||0,pt=parseFloat(document.getElementById('c-pt').value)||0;
+  if(pv+pg+pd+pt!==100){alert('Les 4 poids doivent totaliser 100. Total: '+(pv+pg+pd+pt));return;}
+  CFG.perMax=parseFloat(document.getElementById('c-per').value)||CFG.perMax;
+  CFG.pbvMax=parseFloat(document.getElementById('c-pbv').value)||CFG.pbvMax;
+  CFG.psMax=parseFloat(document.getElementById('c-ps').value)||CFG.psMax;
+  CFG.pfcfMax=parseFloat(document.getElementById('c-pfcf').value)||CFG.pfcfMax;
+  CFG.grahamMin=parseFloat(document.getElementById('c-graham').value)||0;
+  CFG.roeMin=parseFloat(document.getElementById('c-roe').value)||CFG.roeMin;
+  CFG.crMin=parseFloat(document.getElementById('c-cr').value)||CFG.crMin;
+  CFG.deMax=parseFloat(document.getElementById('c-de').value)||CFG.deMax;
+  CFG.fcfyMin=parseFloat(document.getElementById('c-fcfy').value)||CFG.fcfyMin;
+  CFG.rsiSurvente=parseFloat(document.getElementById('c-rsi').value)||CFG.rsiSurvente;
+  CFG.stochSurvente=parseFloat(document.getElementById('c-stoch').value)||CFG.stochSurvente;
+  CFG.cciSurvente=parseFloat(document.getElementById('c-cci').value)||CFG.cciSurvente;
+  CFG.adxMin=parseFloat(document.getElementById('c-adx').value)||CFG.adxMin;
+  CFG.willrSurvente=parseFloat(document.getElementById('c-willr').value)||CFG.willrSurvente;
+  CFG.rocMin=parseFloat(document.getElementById('c-roc').value)||CFG.rocMin;
+  CFG.poidsValue=pv;CFG.poidsGrowth=pg;CFG.poidsDividende=pd;CFG.poidsTechnique=pt;
+  CFG.scoreMin=parseFloat(document.getElementById('c-smin').value)||CFG.scoreMin;
+  document.getElementById('ms').value=CFG.scoreMin;
+  var tkeys=['per','pbv','ev','ps','pfcf','graham','roe','bpa','peg','cr','de','fcfy','rsi','macd','cci','stoch','mm','adx','willr','roc'];
+  var tmap={'per':'tPer','pbv':'tPbv','ev':'tEv','ps':'tPs','pfcf':'tPfcf','graham':'tGraham','roe':'tRoe','bpa':'tBpa','peg':'tPeg','cr':'tCr','de':'tDe','fcfy':'tFcfy','rsi':'tRsi','macd':'tMacd','cci':'tCci','stoch':'tStoch','mm':'tMm','adx':'tAdx','willr':'tWillr','roc':'tRoc'};
+  for(var i=0;i<tkeys.length;i++){var el2=document.getElementById('t-'+tkeys[i]);if(el2)CFG[tmap[tkeys[i]]]=el2.checked?1:0;}
+  savePrefs();closeCfg();render();
+}
+function resetPrefs(){
+  try{localStorage.removeItem(LS_KEY);}catch(e){}
+  location.reload();
+}
+
+function openImp(){document.getElementById('modal-imp').className='modal-bg open';}
+function closeImp(){document.getElementById('modal-imp').className='modal-bg';}
+function importTickers(){
+  var txt=document.getElementById('imp-text').value;
+  var tks=txt.split(/[\n,;\s]+/).map(function(t){return t.trim().toUpperCase();}).filter(function(t){return t.length>0;});
+  if(!tks.length){alert('Aucun ticker valide');return;}
+  var found=[],notFound=[],i,j,hit;
+  for(i=0;i<tks.length;i++){hit=null;for(j=0;j<RAW_ORIG.length;j++){if(RAW_ORIG[j].ticker.toUpperCase()===tks[i]){hit=RAW_ORIG[j];break;}}if(hit){var rr=JSON.parse(JSON.stringify(hit));rr._imported=true;found.push(rr);}else notFound.push(tks[i]);}
+  IMP_DATA=found;
+  var it=document.getElementById('tab-imp');if(it)it.style.display='';
+  closeImp();setTab('imp');
+  if(notFound.length)alert(found.length+' ticker(s) trouves.\n'+notFound.length+' absents: '+notFound.join(', '));
+}
+
+function triggerScan(){
+  if(!GH_TOKEN||GH_TOKEN==='VOTRE_GH_TOKEN'){alert('Token GitHub non configure.');return;}
+  var url='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/actions/workflows/scan.yml/dispatches';
+  fetch(url,{method:'POST',headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main'})})
+  .then(function(r){
+    if(r.status===204||r.ok){
+      document.getElementById('modal-scan').className='modal-bg open';
+      var secs=3600,el=document.getElementById('scan-countdown');
+      var iv=setInterval(function(){secs--;var m=Math.floor(secs/60),s=secs%60;if(el)el.textContent='Rechargement dans '+m+'min '+(s<10?'0':'')+s+'s';if(secs<=0){clearInterval(iv);location.reload();}},1000);
+    }else r.text().then(function(t){alert('Erreur GitHub: '+r.status+'\n'+t);});
+  }).catch(function(e){alert('Erreur: '+e.message);});
+}
+
+// LOGIN SHA-256 gere dans le script isole ci-dessus
+var PWD_HASH='__PWD_HASH__'; // reference uniquement
+
+// ══ WATCHLIST (localStorage) ══
+var WL_KEY='screener_watchlist_v1';
+var WATCHLIST={};
+function loadWatchlist(){
+  try{var r=localStorage.getItem(WL_KEY);if(r)WATCHLIST=JSON.parse(r);}catch(e){}
+}
+function saveWatchlist(){
+  try{localStorage.setItem(WL_KEY,JSON.stringify(WATCHLIST));}catch(e){}
+}
+loadWatchlist();
+
+function toggleStar(tk,btn){
+  if(WATCHLIST[tk]){
+    delete WATCHLIST[tk];
+    btn.classList.remove('on');
+  } else {
+    var _r=RAW_ORIG.filter(function(r){return r.ticker===tk;})[0]; var _sc=_r?getScore(_r):0; WATCHLIST[tk]=typeof _sc==='number'?_sc:parseInt(_sc)||0; console.log('WL add:',tk,'score:',WATCHLIST[tk]);
+    btn.classList.add('on');
+  }
+  saveWatchlist();
+  updateWatchlistBadge();
+  checkWatchlistAlerts();
+}
+function updateWatchlistBadge(){
+  var el=document.getElementById('b-wl');
+  if(el)el.textContent=Object.keys(WATCHLIST).length;
+}
+function checkWatchlistAlerts(){
+  var alerts=[],tk,r,prev,curr;
+  for(tk in WATCHLIST){
+    var rows=RAW_ORIG.filter(function(r){return r.ticker===tk;});
+    if(!rows.length)continue;
+    r=rows[0]; curr=getScore(r); prev=WATCHLIST[tk];
+    if(curr-prev>=5) alerts.push(r.ticker+' +'+( curr-prev)+'pts ('+prev+' → '+curr+')');
+    WATCHLIST[tk]=curr;
+  }
+  saveWatchlist();
+  var el=document.getElementById('wl-alert');
+  if(el){
+    if(alerts.length){el.textContent='&#11088; Progression watchlist: '+alerts.join(' | ');el.style.display='block';}
+    else el.style.display='none';
+  }
+}
+updateWatchlistBadge();
+setTimeout(checkWatchlistAlerts,500);
+
+// ══ URL PARAMS (partage de filtres) ══
+function filtersToURL(){
+  var p=new URLSearchParams();
+  var q=document.getElementById('q').value;
+  var mkt=document.getElementById('mkt').value;
+  var sect=document.getElementById('sect').value;
+  var ms=document.getElementById('ms').value;
+  var pea=document.getElementById('peaOnly').value;
+  if(q)p.set('q',q);
+  if(mkt!=='all')p.set('mkt',mkt);
+  if(sect!=='all')p.set('sect',sect);
+  if(ms!=='35')p.set('ms',ms);
+  if(pea==='1')p.set('pea','1');
+  if(curTab!=='all')p.set('tab',curTab);
+  if(mode!=='combine')p.set('mode',mode);
+  var url=window.location.pathname+'?'+p.toString();
+  navigator.clipboard.writeText(window.location.origin+url).then(function(){
+    alert('Lien copie dans le presse-papier !');
+  }).catch(function(){
+    prompt('Copiez ce lien:',window.location.origin+url);
+  });
+}
+function loadURLParams(){
+  try{
+    var p=new URLSearchParams(window.location.search);
+    if(p.get('q'))document.getElementById('q').value=p.get('q');
+    if(p.get('mkt'))document.getElementById('mkt').value=p.get('mkt');
+    if(p.get('ms'))document.getElementById('ms').value=p.get('ms');
+    if(p.get('pea'))document.getElementById('peaOnly').value=p.get('pea');
+    if(p.get('sect')){
+      var se=document.getElementById('sect');
+      var op=Array.from(se.options).find(function(o){return o.value===p.get('sect');});
+      if(op)se.value=p.get('sect');
+    }
+    if(p.get('mode'))setMode(p.get('mode'));
+    if(p.get('tab'))setTab(p.get('tab'));
+  }catch(e){}
+}
+setTimeout(loadURLParams,100);
+
+// ══ FEU TRICOLORE CONSENSUS ══
+function feuTricolore(r){
+  // Compte signaux haussiers techniques
+  var pos=0,neg=0,n=0;
+  if(r.rsi!==null){n++;if(r.rsi<=45)pos++;else if(r.rsi>=70)neg++;}
+  if(r.macd!==null){n++;if(r.macd>0)pos++;else neg++;}
+  if(r.cci!==null){n++;if(r.cci<-100||( r.cci>50&&r.cci<150))pos++;else if(r.cci>200)neg++;}
+  if(r.stoch!==null){n++;if(r.stoch<=30)pos++;else if(r.stoch>=70)neg++;}
+  if(r.mm200!==null){n++;if(r.mm200>0)pos++;else neg++;}
+  if(r.willr!==null){n++;if(r.willr<=-60)pos++;else if(r.willr>=-20)neg++;}
+  if(n===0)return '<span style="color:#2a3a52">-</span>';
+  var ratio=pos/n;
+  var dots='<span class="feu">';
+  dots+='<span class="feu-dot '+(ratio>=0.6?'on-g':'')+'"></span>';
+  dots+='<span class="feu-dot '+(ratio>=0.4&&ratio<0.6?'on-y':ratio<0.4&&ratio>=0.2?'on-y':'')+'"></span>';
+  dots+='<span class="feu-dot '+(ratio<0.35?'on-r':'')+'"></span>';
+  dots+='</span>';
+  var label=ratio>=0.6?'<span style="font-size:9px;color:#10b981;font-family:monospace;font-weight:700"> Haussier</span>':ratio<0.35?'<span style="font-size:9px;color:#ef4444;font-family:monospace;font-weight:700"> Baissier</span>':'<span style="font-size:9px;color:#f59e0b;font-family:monospace;font-weight:700"> Neutre</span>';
+  return dots+' '+label;
+}
+
+// ══ TOP OPPORTUNITES ══
+function renderTopOpportunites(){
+  // Filtre: score élevé + divergence FOND+ OU RSI bas OU momentum fort
+  var candidates=RAW_ORIG.filter(function(r){
+    return getScore(r)>=50;
+  });
+  // Score composite: pondère fond+, rsi bas, momentum
+  candidates.sort(function(a,b){
+    var sa=getScore(a)*1.0 + (a.divergence==='FOND+'?15:0) + (a.rsi&&a.rsi<=40?10:0) + (lsmom(a)>60?8:0);
+    var sb=getScore(b)*1.0 + (b.divergence==='FOND+'?15:0) + (b.rsi&&b.rsi<=40?10:0) + (lsmom(b)>60?8:0);
+    return sb-sa;
+  });
+  var top=candidates.slice(0,20);
+  var el=document.getElementById('b-opp');if(el)el.textContent=top.length;
+  return top;
+}
+
+function renderOppCards(data){
+  var html='';
+  for(var i=0;i<data.length;i++){
+    var r=data[i],sc=getScore(r),mom=lsmom(r);
+    var sc_c=sc>=70?'opp-s-g':sc>=50?'opp-s-y':'opp-s-r';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    html+='<div class="opp-card">';
+    html+='<div class="opp-rank">'+(i+1)+'</div>';
+    html+='<div style="flex:1">';
+    html+='<div style="display:flex;align-items:center;gap:6px">';
+    html+='<span class="opp-tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+r.ticker+'">'+r.ticker+'</span>';
+    html+='<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+r.ticker+'">&#11088;</button>';
+    if(r.divergence)html+='<span class="div-badge '+(r.divergence==='FOND+'?'div-fond':'div-tech')+'">'+r.divergence+'</span>';
+    html+='</div>';
+    html+='<div class="opp-nom">'+r.nom+'</div>';
+    html+='<div class="opp-scores">';
+    html+='<span class="opp-s '+sc_c+'">Score '+sc+'</span>';
+    if(mom>=50)html+='<span class="opp-s opp-s-g">Mom '+mom+'</span>';
+    if(r.rsi&&r.rsi<=45)html+='<span class="opp-s opp-s-g">RSI '+r.rsi+'</span>';
+    if(r.div&&r.div>=3)html+='<span class="opp-s opp-s-y">Div '+parseFloat(r.div).toFixed(1)+'%</span>';
+    if(r.graham&&r.graham>=0)html+='<span class="opp-s opp-s-g">Graham +'+r.graham.toFixed(0)+'%</span>';
+    html+='</div>';
+    html+='<div style="margin-top:4px">'+feuTricolore(r)+'</div>';
+    html+='</div>';
+    html+='<div>'+sparkSVG(r.sparkline)+'</div>';
+    html+='</div>';
+  }
+  return html;
+}
+
+// ══ EXPORT PDF ══
+function exportPDF(){
+  var top=renderTopOpportunites();
+  var date=SCAN_DATE;
+  var rows='';
+  for(var i=0;i<top.length;i++){
+    var r=top[i];
+    rows+='<tr style="border-bottom:1px solid #e2e8f0">'
+      +'<td style="padding:6px 4px;font-weight:700">'+(i+1)+'</td>'
+      +'<td style="padding:6px 4px;font-family:monospace;color:#0284c7;font-weight:700">'+r.ticker+'</td>'
+      +'<td style="padding:6px 4px;font-size:11px">'+r.nom+'</td>'
+      +'<td style="padding:6px 4px;text-align:center;font-weight:700">'+getScore(r)+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.per?parseFloat(r.per).toFixed(1)+'x':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.roe?r.roe+'%':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.div?parseFloat(r.div).toFixed(1)+'%':'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.rsi||'-')+'</td>'
+      +'<td style="padding:6px 4px;text-align:center">'+(r.divergence||'-')+'</td>'
+      +'<td style="padding:6px 4px;font-size:10px;color:#64748b">'+r.secteur+'</td>'
+      +'</tr>';
+  }
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Screener Top 20 '+date+'</title>'
+    +'<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#1e293b;padding:20px}'
+    +'h1{font-size:18px;color:#0284c7;margin-bottom:4px}'
+    +'h2{font-size:11px;color:#64748b;margin-bottom:16px;font-weight:400}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'th{background:#f1f5f9;padding:6px 4px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b}'
+    +'@media print{@page{margin:1cm}}'
+    +'</style></head><body>'
+    +'<h1>Stock Screener - Top 20</h1>'
+    +'<h2>Scan du '+date+' - '+RAW_ORIG.length+' actions analysees</h2>'
+    +'<table><thead><tr>'
+    +'<th>#</th><th>Ticker</th><th>Nom</th><th>Score</th><th>PER</th><th>ROE</th><th>Div</th><th>RSI</th><th>Signal</th><th>Secteur</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement</p></body></html>';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  var now=new Date();
+  a.download='screener_top20_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.html';
+  a.click();
+}
+
+// ══ PATCH RENDER pour nouveaux onglets ══
+var _origSetTab=setTab;
+setTab=function(t){
+  _origSetTab(t);
+  var oppEl=document.getElementById('card-list-opp');
+  var twEl=document.querySelector('.tw');
+  var clEl=document.getElementById('card-list');
+  if(!oppEl)return;
+  if(t==='opp'){
+    var top=renderTopOpportunites();
+    oppEl.style.display='block';
+    oppEl.innerHTML=renderOppCards(top);
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+  } else {
+    oppEl.style.display='none';
+    if(twEl)twEl.style.display='';
+    if(clEl)clEl.style.display='';
+    render();
+  }
+};
+
+// ══ PATCH cH pour ajouter étoile et feu ══
+var _origCH=cH;
+cH=function(col,r){
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea)tg+='<span class="ptag">PEA</span>';
+    if(r._imported)tg+='<span class="imptag">IMP</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    var tk=r.ticker;
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+tk+'">'+tk+'</span>'
+      +tg
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+tk+'">&#9878;</button>'
+      +'<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+tk+'" title="Watchlist">&#11088;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  if(col==='signaux'){
+    // Add feu tricolore before signals
+    var orig=_origCH(col,r);
+    return feuTricolore(r)+' '+orig;
+  }
+  return _origCH(col,r);
+};
+
+// ══ PATCH doFilter pour watchlist tab ══
+var _origDoFilter=doFilter;
+doFilter=function(){
+  if(curTab==='wl'){
+    var wlData=RAW_ORIG.filter(function(r){return WATCHLIST[r.ticker];});
+    return wlData;
+  }
+  return _origDoFilter();
+};
+
+// ══ SCORE HISTORY SPARKLINE ══
+function scoreHistSVG(hist){
+  if(!hist||hist.length<2)return '';
+  var w=36,h=14;
+  var mn=Math.min.apply(null,hist),mx=Math.max.apply(null,hist);
+  var rng=mx-mn||1;
+  var n=hist.length;
+  var pts=hist.map(function(v,i){return [Math.round(i*(w/(n-1))),Math.round(h-(v-mn)/rng*h)];});
+  var path=pts.map(function(p,i){return (i===0?'M':'L')+p[0]+' '+p[1];}).join(' ');
+  var last=hist[hist.length-1],first=hist[0];
+  var color=last>first?'#10b981':last<first?'#ef4444':'#64748b';
+  return '<svg class="hist-spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>'
+    +'</svg>';
+}
+
+// ══ THEME PERSONNALISABLE ══
+var ACCENT_COLORS=[
+  {name:'Vert',hex:'#00d4aa',dark:'#00a87f'},
+  {name:'Bleu',hex:'#3b82f6',dark:'#2563eb'},
+  {name:'Violet',hex:'#8b5cf6',dark:'#7c3aed'},
+  {name:'Rose',hex:'#ec4899',dark:'#db2777'},
+  {name:'Orange',hex:'#f59e0b',dark:'#d97706'},
+  {name:'Rouge',hex:'#ef4444',dark:'#dc2626'},
+];
+var CURRENT_ACCENT='#00d4aa';
+
+function applyAccent(hex,dark){
+  CURRENT_ACCENT=hex;
+  var root=document.documentElement;
+  // Update CSS variables via inline style injections
+  var style=document.getElementById('accent-style');
+  if(!style){style=document.createElement('style');style.id='accent-style';document.head.appendChild(style);}
+  style.textContent=
+    '.htitle{color:'+hex+'!important}'+
+    '.tk{color:'+hex+'!important}'+
+    '.tab.on{border-color:'+hex+'!important}'+
+    '.mbtn.on{border-color:'+hex+'!important}'+
+    '.hbtn-scan{background:linear-gradient(135deg,'+hex+','+dark+')!important}'+
+    '.bdg.on,.tab.on .bdg{background:'+hex+'!important}'+
+    '.login-logo{color:'+hex+'!important}'+
+    '.login-btn{background:linear-gradient(135deg,'+hex+','+dark+')!important}'+
+    '.guide-title{color:'+hex+'!important}'+
+    '.opp-tk{color:'+hex+'!important}'+
+    'input:focus,select:focus{border-color:'+hex+'44!important}'+
+    '.tog input:checked+.tog-sl{background:'+hex+'22!important;border-color:'+hex+'55!important}'+
+    '.tog input:checked+.tog-sl:before{background:'+hex+'!important}';
+  try{localStorage.setItem('screener_accent',JSON.stringify({hex:hex,dark:dark}));}catch(e){}
+}
+function loadAccent(){
+  try{
+    var a=JSON.parse(localStorage.getItem('screener_accent'));
+    if(a&&a.hex)applyAccent(a.hex,a.dark);
+  }catch(e){}
+}
+loadAccent();
+
+function openTheme(){
+  try{
+  var el=document.getElementById('theme-swatches');
+  var modal=document.getElementById('modal-theme');
+  if(!el||!modal){console.error('Theme modal elements missing');return;}
+  el.innerHTML='';
+  ACCENT_COLORS.forEach(function(c){
+    var sw=document.createElement('span');
+    sw.className='theme-swatch'+(CURRENT_ACCENT===c.hex?' active':'');
+    sw.style.background=c.hex;
+    sw.title=c.name;
+    sw.onclick=function(){
+      applyAccent(c.hex,c.dark);
+      document.querySelectorAll('.theme-swatch').forEach(function(s){s.classList.remove('active');});
+      sw.classList.add('active');
+    };
+    el.appendChild(sw);
+  });
+  modal.className='modal-bg open';
+  }catch(err){console.error('openTheme error:',err);}
+}
+
+// ══ DELTA SCORE (variation vs scan precedent) ══
+function getDelta(r){
+  if(!r.score_history||r.score_history.length<2)return null;
+  var prev=r.score_history[r.score_history.length-2];
+  var curr=getScore(r);
+  return curr-prev;
+}
+function deltaBadge(r){
+  var d=getDelta(r);
+  if(d===null)return '';
+  if(d>0)return '<span class="delta delta-up">+'+d+'</span>';
+  if(d<0)return '<span class="delta delta-dn">'+d+'</span>';
+  return '<span class="delta delta-eq">=</span>';
+}
+
+// ══ NOUVEAUX ENTRANTS ══
+var PREV_TICKERS={};
+function loadPrevTickers(){
+  try{
+    var raw=localStorage.getItem('screener_prev_tickers');
+    if(raw)PREV_TICKERS=JSON.parse(raw);
+  }catch(e){}
+}
+function savePrevTickers(){
+  try{
+    var current={};
+    RAW_ORIG.forEach(function(r){current[r.ticker]=1;});
+    localStorage.setItem('screener_prev_tickers',JSON.stringify(current));
+  }catch(e){}
+}
+loadPrevTickers();
+function isNew(r){
+  return Object.keys(PREV_TICKERS).length>0 && !PREV_TICKERS[r.ticker];
+}
+// Save current as prev after 5s (so first load shows diff)
+setTimeout(savePrevTickers, 5000);
+
+function getNewEntrants(){
+  return RAW_ORIG.filter(function(r){return isNew(r);});
+}
+
+// ══ RADAR CHART ══
+function openRadar(ticker){
+  var rows=RAW_ORIG.filter(function(r){return r.ticker===ticker;});
+  if(!rows.length)return;
+  var r=rows[0];
+  document.getElementById('radar-title').textContent='Profil — '+r.ticker+' / '+r.nom;
+
+  var dims=[
+    {label:'Value',val:lsv(r)},
+    {label:'Growth',val:lsg(r)},
+    {label:'Divid.',val:lsd(r)},
+    {label:'Tech',val:lst(r)},
+    {label:'Moment.',val:lsmom(r)},
+  ];
+
+  var cx=140,cy=140,R=90,n=dims.length;
+  var svg='';
+  // Grid circles
+  [25,50,75,100].forEach(function(pct){
+    var rr=R*pct/100;
+    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rr+'" class="radar-grid"/>';
+  });
+  // Axes + labels
+  dims.forEach(function(d,i){
+    var angle=(i/n)*2*Math.PI-Math.PI/2;
+    var x=cx+R*Math.cos(angle);
+    var y=cy+R*Math.sin(angle);
+    var lx=cx+(R+18)*Math.cos(angle);
+    var ly=cy+(R+18)*Math.sin(angle);
+    svg+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" class="radar-axis"/>';
+    svg+='<text x="'+lx+'" y="'+(ly+4)+'" class="radar-label">'+d.label+'</text>';
+  });
+  // Area
+  var pts=dims.map(function(d,i){
+    var angle=(i/n)*2*Math.PI-Math.PI/2;
+    var r2=R*d.val/100;
+    return [cx+r2*Math.cos(angle), cy+r2*Math.sin(angle)];
+  });
+  var path=pts.map(function(p,i){return (i===0?'M':'L')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ')+'Z';
+  svg+='<path d="'+path+'" class="radar-area"/>';
+  pts.forEach(function(p){svg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+CURRENT_ACCENT+'"/>';});
+  // Score global
+  svg+='<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-family="monospace" font-size="18" font-weight="900" fill="'+CURRENT_ACCENT+'">'+getScore(r)+'</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+17)+'" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">SCORE</text>';
+
+  document.getElementById('radar-svg').innerHTML=svg;
+
+  // Scores detail
+  var sc='';
+  dims.forEach(function(d){
+    var c=d.val>=70?'#10b981':d.val>=50?'#f59e0b':'#64748b';
+    sc+='<div style="background:#0d1520;border-radius:6px;padding:6px 8px"><div style="font-size:8px;color:#64748b">'+d.label+'</div><div style="font-family:monospace;font-size:16px;font-weight:900;color:'+c+'">'+d.val+'</div></div>';
+  });
+  document.getElementById('radar-scores').innerHTML=sc;
+
+  // Delta
+  var d2=getDelta(r);
+  var dEl=document.getElementById('radar-delta');
+  if(d2!==null){
+    var dc=d2>0?'#10b981':d2<0?'#ef4444':'#64748b';
+    dEl.innerHTML='Evolution vs scan precedent: <span style="font-family:monospace;font-weight:700;color:'+dc+'">'+(d2>0?'+':'')+d2+'pts</span>';
+  } else {
+    dEl.innerHTML='';
+  }
+  document.getElementById('modal-radar').className='modal-bg open';
+}
+
+// ══ RECHERCHE AVANCEE ══
+var ADV_FILTERS={};
+function toggleAdvSearch(){
+  var el=document.getElementById('adv-search');
+  if(el)el.classList.toggle('open');
+}
+function applyAdvSearch(){
+  ADV_FILTERS={};
+  var fields=[
+    {id:'rsi',key:'rsi'},
+    {id:'sv',key:'_sv'},
+    {id:'div',key:'div'},
+    {id:'gr',key:'graham'},
+  ];
+  fields.forEach(function(f){
+    var op=document.getElementById('adv-'+f.id+'-op');
+    var val=document.getElementById('adv-'+f.id+'-val');
+    if(op&&val&&val.value!==''){
+      ADV_FILTERS[f.key]={op:op.value,val:parseFloat(val.value)};
+    }
+  });
+  render();
+}
+function clearAdvSearch(){
+  ADV_FILTERS={};
+  ['rsi','sv','div','gr'].forEach(function(id){
+    var el=document.getElementById('adv-'+id+'-val');
+    if(el)el.value='';
+  });
+  render();
+}
+function passesAdvFilter(r){
+  for(var key in ADV_FILTERS){
+    var f=ADV_FILTERS[key];
+    var v=key==='_sv'?lsv(r):r[key];
+    if(v===null||v===undefined)return false;
+    if(f.op==='lt'&&parseFloat(v)>=f.val)return false;
+    if(f.op==='gt'&&parseFloat(v)<=f.val)return false;
+  }
+  return true;
+}
+
+// ══ BACKTEST WATCHLIST ══
+function openBacktest(){
+  console.log('WL keys:',Object.keys(WATCHLIST),'values:',WATCHLIST);
+  var modal=document.getElementById('modal-bt');
+  if(!modal){console.error('modal-bt not found');return;}
+  var wlKeys=Object.keys(WATCHLIST);
+  if(!wlKeys.length){
+    alert('Ajoutez des actions a votre watchlist d\'abord.');
+    return;
+  }
+  var rows=wlKeys.map(function(tk){
+    var r=RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
+    if(!r)return null;
+    var addedScore=parseInt(WATCHLIST[tk])||0;
+    var currScore=getScore(r);
+    var delta=currScore-addedScore;
+    return {ticker:tk,nom:r.nom,addedScore:addedScore,currScore:currScore,delta:delta,r:r};
+  }).filter(Boolean);
+  rows.sort(function(a,b){return b.delta-a.delta;});
+
+  var html='';
+  rows.forEach(function(row){
+    var c=row.delta>0?'#10b981':row.delta<0?'#ef4444':'#64748b';
+    var bar=Math.min(Math.abs(row.delta)*2,100);
+    html+='<div class="bt-row">';
+    html+='<div><div style="font-family:monospace;font-size:13px;font-weight:900;color:'+CURRENT_ACCENT+'">'+row.ticker+'</div>';
+    html+='<div style="font-size:10px;color:#64748b">'+row.nom+'</div>';
+    html+='<div style="font-size:9px;color:#64748b;margin-top:3px">'+row.addedScore+' → '+row.currScore+'</div></div>';
+    html+='<div style="text-align:right">';
+    html+='<div class="bt-pct" style="color:'+c+'">'+(row.delta>0?'+':'')+row.delta+'pts</div>';
+    html+='<div style="width:60px;height:4px;background:#1e2d45;border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:'+c+';border-radius:2px"></div></div>';
+    html+='</div></div>';
+  });
+
+  document.getElementById('bt-content').innerHTML=html||'<div style="color:#64748b;font-size:12px">Aucune donnee</div>';
+  modal.className='modal-bg open';
+}
+
+// ══ DASHBOARD ══
+function renderDashboard(){
+  var top5=renderTopOpportunites().slice(0,5);
+  var wlKeys=Object.keys(WATCHLIST);
+  var totalScan=typeof NSCAN!=='undefined'?NSCAN:RAW_ORIG.length;
+  var score70=RAW_ORIG.filter(function(r){return getScore(r)>=70;}).length;
+  var divVals=RAW_ORIG.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
+  divVals.sort(function(a,b){return a-b;});
+  var divMoy='N/A';
+  if(divVals.length){
+    var mid=Math.floor(divVals.length/2);
+    var median=divVals.length%2?divVals[mid]:((divVals[mid-1]+divVals[mid])/2);
+    divMoy=median.toFixed(1)+'%';
+  }
+  var rsiLow=RAW_ORIG.filter(function(r){return r.rsi&&r.rsi<=45;}).length;
+
+  // Sector distribution of top 20
+  var sectorCount={};
+  renderTopOpportunites().forEach(function(r){
+    sectorCount[r.secteur]=(sectorCount[r.secteur]||0)+1;
+  });
+  var sectorsSorted=Object.keys(sectorCount).sort(function(a,b){return sectorCount[b]-sectorCount[a];}).slice(0,5);
+  var maxSec=sectorCount[sectorsSorted[0]]||1;
+
+  var sectorBars='';
+  sectorsSorted.forEach(function(s){
+    var pct=Math.round(sectorCount[s]/maxSec*100);
+    sectorBars+='<div class="sector-bar"><span class="sector-name">'+s+'</span><div class="sector-track"><div class="sector-fill" style="width:'+pct+'%"></div></div><span class="sector-count">'+sectorCount[s]+'</span></div>';
+  });
+
+  var top5html='';
+  top5.forEach(function(r,i){
+    var sc=getScore(r);
+    var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
+    top5html+='<div class="dash-top-item"><span style="font-family:monospace;font-size:12px;font-weight:700;color:'+CURRENT_ACCENT+'">'+(i+1)+'. '+r.ticker+'</span><span style="font-family:monospace;font-size:13px;font-weight:900;color:'+c+'">'+sc+'</span></div>';
+  });
+
+  var html=
+    '<div class="dash-grid">'+
+    '<div class="dash-card"><div class="dash-card-title">Scan</div>'+
+    '<div style="font-family:monospace;font-size:24px;font-weight:900;color:'+CURRENT_ACCENT+'">'+totalScan+'</div>'+
+    '<div style="font-size:10px;color:#64748b">actions analysees</div>'+
+    '<div style="margin-top:8px;font-family:monospace;font-size:18px;font-weight:700;color:#10b981">'+score70+'</div>'+
+    '<div style="font-size:10px;color:#64748b">score 70+</div></div>'+
+
+    '<div class="dash-card"><div class="dash-card-title">Marche</div>'+
+    '<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. mediane (&le;20%)</div>'+
+    '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#8b5cf6">'+divMoy+'</div>'+
+    '<div style="font-size:10px;color:#64748b;margin-top:6px;margin-bottom:2px">RSI survente</div>'+
+    '<div style="font-family:monospace;font-size:18px;font-weight:700;color:#3b82f6">'+rsiLow+'</div></div>'+
+
+    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Top 5 Opportunites</div>'+top5html+'</div>'+
+
+    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Repartition sectorielle Top 20</div>'+sectorBars+'</div>'+
+    '</div>'+
+
+    '<div style="font-size:10px;color:#64748b;text-align:center;padding:8px">'+
+    'Watchlist: '+wlKeys.length+' action(s) | Scan: '+SCAN_DATE+'</div>';
+
+  document.getElementById('dash-view').innerHTML=html;
+}
+
+// ══ PATCH setTab pour nouveaux onglets ══
+var _origSetTab2=setTab;
+setTab=function(t){
+  _origSetTab2(t);
+  var dashEl=document.getElementById('dash-view');
+  var twEl=document.querySelector('.tw');
+  var clEl=document.getElementById('card-list');
+  var oppEl=document.getElementById('card-list-opp');
+
+  // Update new tab UI
+  ['new','dash'].forEach(function(x){
+    var el=document.getElementById('tab-'+x);
+    if(el)el.className='tab'+(t===x?' on':'');
+  });
+
+  if(t==='dash'){
+    if(dashEl){dashEl.style.display='block';renderDashboard();}
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+    if(oppEl)oppEl.style.display='none';
+  } else {
+    if(dashEl)dashEl.style.display='none';
+    // oppEl handled by previous patch
+  }
+  // Update new entrants badge
+  var ne=getNewEntrants();
+  var nel=document.getElementById('b-new');
+  if(nel)nel.textContent=ne.length;
+};
+
+// ══ PATCH doFilter pour nouveaux entrants + adv search ══
+var _origDoFilter2=doFilter;
+doFilter=function(){
+  var data;
+  if(curTab==='new'){
+    data=getNewEntrants();
+  } else {
+    data=_origDoFilter2();
+  }
+  // Apply advanced filters
+  if(Object.keys(ADV_FILTERS).length>0){
+    data=data.filter(passesAdvFilter);
+  }
+  return data;
+};
+
+// ══ PATCH cH pour delta + radar + nouveaux ══
+var _origCH2=cH;
+cH=function(col,r){
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea)tg+='<span class="ptag">PEA</span>';
+    if(r._imported)tg+='<span class="imptag">IMP</span>';
+    if(isNew(r))tg+='<span class="new-badge">NEW</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    var tk=r.ticker;
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+tk+'">'+tk+'</span>'
+      +tg+deltaBadge(r)
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+tk+'">&#9878;</button>'
+      +'<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+tk+'" title="Watchlist">&#11088;</button>'
+      +'<button onclick="openRadar(this.dataset.tk)" data-tk="'+tk+'" style="font-size:10px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px" title="Profil radar">&#127919;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  return _origCH2(col,r);
+};
+
+// Init new badges
+setTimeout(function(){
+  var ne=getNewEntrants();
+  var nel=document.getElementById('b-new');
+  if(nel)nel.textContent=ne.length;
+},200);
+
+// ══ RESET FILTRES ══
+function resetFilters(){
+  document.getElementById('q').value='';
+  document.getElementById('mkt').value='all';
+  var se=document.getElementById('sect');if(se)se.value='all';
+  document.getElementById('ms').value=CFG.scoreMin;
+  document.getElementById('peaOnly').value='0';
+  document.getElementById('f-sv').value='0';
+  document.getElementById('f-sg').value='0';
+  document.getElementById('f-sd').value='0';
+  document.getElementById('f-st').value='0';
+  document.getElementById('f-smom').value='0';
+  ADV_FILTERS={};
+  var advEl=document.getElementById('adv-search');
+  if(advEl)advEl.classList.remove('open');
+  ['rsi','sv','div','gr'].forEach(function(id){
+    var el=document.getElementById('adv-'+id+'-val');
+    if(el)el.value='';
+  });
+  setTab('all');
+  render();
+}
+
+render();
+
+</script>
+
+<!-- Modal Radar Chart -->
+<div class="modal-bg" id="modal-radar">
+<div class="modal" style="max-width:420px">
+<button class="modal-close" onclick="document.getElementById('modal-radar').className='modal-bg'">&#10005;</button>
+<h3 id="radar-title">&#127919; Profil de l'action</h3>
+<svg class="radar-svg" id="radar-svg" width="280" height="280" viewBox="0 0 280 280"></svg>
+<div id="radar-scores" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:10px"></div>
+<div id="radar-delta" style="margin-top:8px;font-size:11px;color:#64748b"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-radar').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+<!-- Modal Backtest Watchlist -->
+<div class="modal-bg" id="modal-bt">
+<div class="modal" style="max-width:480px">
+<button class="modal-close" onclick="document.getElementById('modal-bt').className='modal-bg'">&#10005;</button>
+<h3>&#128200; Backtest Watchlist</h3>
+<div style="font-size:10px;color:#64748b;margin-bottom:10px">Evolution du score depuis l'ajout a la watchlist</div>
+<div id="bt-content"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-bt').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+<!-- Modal Theme -->
+<div class="modal-bg" id="modal-theme">
+<div class="modal" style="max-width:360px">
+<button class="modal-close" onclick="document.getElementById('modal-theme').className='modal-bg'">&#10005;</button>
+<h3>&#127912; Theme</h3>
+<div style="font-size:11px;color:#64748b;margin-bottom:12px">Couleur d'accent</div>
+<div id="theme-swatches" style="margin-bottom:16px"></div>
+<div style="font-size:11px;color:#64748b;margin-bottom:8px">Mode</div>
+<div style="display:flex;gap:8px">
+<button onclick="if(!document.body.classList.contains('light'))toggleTheme()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e2d45;background:#f1f5f9;color:#1e293b;cursor:pointer;font-size:12px">&#9728; Clair</button>
+<button onclick="if(document.body.classList.contains('light'))toggleTheme()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e2d45;background:#0a0e1a;color:#e2e8f0;cursor:pointer;font-size:12px">&#9790; Sombre</button>
+</div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-theme').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+</body></html>
