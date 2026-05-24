@@ -44,8 +44,8 @@
 .fg{display:flex;flex-direction:column;gap:3px}
 .fg label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px}
 select,input[type=text],input[type=number]{background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-size:12px;padding:7px 8px;border-radius:7px;outline:none;font-family:inherit}
-.tabs{display:flex;gap:5px;margin-bottom:10px}
-.tab{padding:7px 14px;border-radius:8px;border:1px solid #1e2d45;background:#0d1520;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;font-family:monospace;display:flex;align-items:center;gap:5px}
+.tabs{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}.tabs::-webkit-scrollbar{display:none}
+.tab{padding:7px 10px;border-radius:8px;border:1px solid #1e2d45;background:#0d1520;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;font-family:monospace;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
 .tab.on{border-color:#00d4aa;background:#111827;color:#e2e8f0}
 .bdg{background:#1e2d45;color:#64748b;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px}
 .tab.on .bdg{background:#00d4aa;color:#000}
@@ -890,8 +890,8 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="tab on" id="tab-all" onclick="setTab('all')">Toutes <span class="bdg" id="b-all">0</span></div>
 <div class="tab" id="tab-pea" onclick="setTab('pea')">PEA <span class="bdg" id="b-pea">0</span></div>
 <div class="tab" id="tab-div" onclick="setTab('div')">&#9888; Divergences <span class="bdg" id="b-div">0</span></div>
-<div class="tab" id="tab-opp" onclick="setTab('opp')">&#127919; Top Opport. <span class="bdg" id="b-opp">20</span></div>
-<div class="tab" id="tab-wl" onclick="setTab('wl')">&#11088; Watchlist <span class="bdg" id="b-wl">0</span></div>
+<div class="tab" id="tab-opp" onclick="setTab('opp')">&#127919; Top 20 <span class="bdg" id="b-opp">20</span></div>
+<div class="tab" id="tab-wl" onclick="setTab('wl')">&#11088; WL <span class="bdg" id="b-wl">0</span></div>
 <div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
 </div>
 <div class="ssf">
