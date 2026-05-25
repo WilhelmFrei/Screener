@@ -1807,27 +1807,6 @@ function exportPDF(){
   a.click();
 }
 
-// ══ PATCH RENDER pour nouveaux onglets ══
-var _origSetTab=setTab;
-setTab=function(t){
-  _origSetTab(t);
-  var oppEl=document.getElementById('card-list-opp');
-  var twEl=document.querySelector('.tw');
-  var clEl=document.getElementById('card-list');
-  if(!oppEl)return;
-  if(t==='opp'){
-    var top=renderTopOpportunites();
-    oppEl.style.display='block';
-    oppEl.innerHTML=renderOppCards(top);
-    if(twEl)twEl.style.display='none';
-    if(clEl)clEl.style.display='none';
-  } else {
-    oppEl.style.display='none';
-    if(twEl)twEl.style.display='';
-    if(clEl)clEl.style.display='';
-    render();
-  }
-};
 
 // ══ PATCH cH pour ajouter étoile et feu ══
 var _origCH=cH;
@@ -2195,35 +2174,49 @@ function renderDashboard(){
   document.getElementById('dash-view').innerHTML=html;
 }
 
-// ══ PATCH setTab pour nouveaux onglets ══
-var _origSetTab2=setTab;
+// ══ SETTAB UNIFIE ══
+var _origSetTabBase=setTab;
 setTab=function(t){
-  _origSetTab2(t);
+  _origSetTabBase(t);
+  curTab=t;
+
+  var oppEl=document.getElementById('card-list-opp');
   var dashEl=document.getElementById('dash-view');
   var twEl=document.querySelector('.tw');
   var clEl=document.getElementById('card-list');
-  var oppEl=document.getElementById('card-list-opp');
 
-  // Update new tab UI
-  ['new','dash'].forEach(function(x){
+  // Reset all views
+  if(oppEl)oppEl.style.display='none';
+  if(dashEl)dashEl.style.display='none';
+  if(twEl)twEl.style.display='';
+  if(clEl)clEl.style.display='';
+
+  // Tab-specific logic
+  if(t==='opp'){
+    var top=renderTopOpportunites();
+    if(oppEl){oppEl.style.display='block';oppEl.innerHTML=renderOppCards(top);}
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+  } else if(t==='dash'){
+    if(dashEl){dashEl.style.display='block';renderDashboard();}
+    if(twEl)twEl.style.display='none';
+    if(clEl)clEl.style.display='none';
+  } else {
+    render();
+  }
+
+  // Update tab UI for new tabs
+  ['new','dash','opp'].forEach(function(x){
     var el=document.getElementById('tab-'+x);
     if(el)el.className='tab'+(t===x?' on':'');
   });
 
-  if(t==='dash'){
-    if(dashEl){dashEl.style.display='block';renderDashboard();}
-    if(twEl)twEl.style.display='none';
-    if(clEl)clEl.style.display='none';
-    if(oppEl)oppEl.style.display='none';
-  } else {
-    if(dashEl)dashEl.style.display='none';
-    // oppEl handled by previous patch
-  }
   // Update new entrants badge
   var ne=getNewEntrants();
   var nel=document.getElementById('b-new');
   if(nel)nel.textContent=ne.length;
 };
+
 
 // ══ PATCH doFilter pour nouveaux entrants + adv search ══
 var _origDoFilter2=doFilter;
