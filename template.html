@@ -1721,7 +1721,7 @@ function feuTricolore(r){
 function renderTopOpportunites(){
   // Filtre: score élevé + divergence FOND+ OU RSI bas OU momentum fort
   var candidates=RAW_ORIG.filter(function(r){
-    return getScore(r)>=50;
+    return getScore(r)>=CFG.scoreMin;
   });
   // Score composite: pondère fond+, rsi bas, momentum
   candidates.sort(function(a,b){
@@ -2177,15 +2177,15 @@ function renderDashboard(){
 // ══ SETTAB UNIFIE ══
 var _origSetTabBase=setTab;
 setTab=function(t){
+  // Update tab button styles (original function)
   _origSetTabBase(t);
-  curTab=t;
 
   var oppEl=document.getElementById('card-list-opp');
   var dashEl=document.getElementById('dash-view');
   var twEl=document.querySelector('.tw');
   var clEl=document.getElementById('card-list');
 
-  // Reset all views
+  // Reset all views to default
   if(oppEl)oppEl.style.display='none';
   if(dashEl)dashEl.style.display='none';
   if(twEl)twEl.style.display='';
@@ -2193,15 +2193,21 @@ setTab=function(t){
 
   // Tab-specific logic
   if(t==='opp'){
+    curTab='all'; // use all data for top opport.
     var top=renderTopOpportunites();
+    curTab='opp';
     if(oppEl){oppEl.style.display='block';oppEl.innerHTML=renderOppCards(top);}
     if(twEl)twEl.style.display='none';
     if(clEl)clEl.style.display='none';
   } else if(t==='dash'){
-    if(dashEl){dashEl.style.display='block';renderDashboard();}
+    curTab='all'; // use all data for dashboard
+    renderDashboard();
+    curTab='dash';
+    if(dashEl)dashEl.style.display='block';
     if(twEl)twEl.style.display='none';
     if(clEl)clEl.style.display='none';
   } else {
+    curTab=t;
     render();
   }
 
