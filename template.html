@@ -1719,14 +1719,11 @@ function feuTricolore(r){
 
 // ══ TOP OPPORTUNITES ══
 function renderTopOpportunites(){
-  // Filtre: score élevé + divergence FOND+ OU RSI bas OU momentum fort
-  var candidates=RAW_ORIG.filter(function(r){
-    return getScore(r)>=CFG.scoreMin;
-  });
-  // Score composite: pondère fond+, rsi bas, momentum
+  // Use stored score + bonuses for composite ranking
+  var candidates=RAW_ORIG.slice(); // all results
   candidates.sort(function(a,b){
-    var sa=getScore(a)*1.0 + (a.divergence==='FOND+'?15:0) + (a.rsi&&a.rsi<=40?10:0) + (lsmom(a)>60?8:0);
-    var sb=getScore(b)*1.0 + (b.divergence==='FOND+'?15:0) + (b.rsi&&b.rsi<=40?10:0) + (lsmom(b)>60?8:0);
+    var sa=(a.score||0) + (a.divergence==='FOND+'?15:0) + (a.rsi&&a.rsi<=40?10:0) + ((a.smom||0)>60?8:0);
+    var sb=(b.score||0) + (b.divergence==='FOND+'?15:0) + (b.rsi&&b.rsi<=40?10:0) + ((b.smom||0)>60?8:0);
     return sb-sa;
   });
   var top=candidates.slice(0,20);
