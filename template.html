@@ -316,6 +316,23 @@ body.light .bt-row{border-color:#e2e8f0}
 body.light .radar-axis,body.light .radar-grid{stroke:#e2e8f0}
 body.light .radar-label{fill:#94a3b8}
 body.light .dash-top-item{border-color:#e2e8f0}
+
+body.light .cfg-section{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8}
+body.light .cfg-item{background:#f1f5f9;border-color:#e2e8f0}
+body.light .cfg-item label{color:#475569}
+body.light .cfg-item input[type=number]{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .tog-row{background:#f1f5f9;border-color:#e2e8f0}
+body.light .tog-row label{color:#475569}
+body.light .tog-sl{background:#e2e8f0;border-color:#cbd5e1}
+body.light .modal{background:#fff;border-color:#e2e8f0}
+body.light .modal h3{color:#1e293b}
+body.light .modal-btn-cancel{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+body.light .cfg-note{color:#d97706}
+
+
+.tog-group{background:#0d1520}
+body.light .tog-group{background:#f1f5f9;border:1px solid #e2e8f0}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -354,7 +371,7 @@ body.light .dash-top-item{border-color:#e2e8f0}
 <div class="cfg-item"><label>P/FCF max</label><input type="number" id="c-pfcf" step="2"></div>
 <div class="cfg-item"><label>Graham min (%)</label><input type="number" id="c-graham" step="5"></div>
 </div>
-<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-group" style="border-radius:8px;padding:10px 12px;margin-bottom:10px">
 <div class="tog-row"><span class="tog-label">PER actif</span><label class="tog"><input type="checkbox" id="t-per" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">P/Book actif</span><label class="tog"><input type="checkbox" id="t-pbv" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">EV/EBITDA actif</span><label class="tog"><input type="checkbox" id="t-ev" checked><span class="tog-sl"></span></label></div>
@@ -369,7 +386,7 @@ body.light .dash-top-item{border-color:#e2e8f0}
 <div class="cfg-item"><label>D/E max (%)</label><input type="number" id="c-de" step="10"></div>
 <div class="cfg-item"><label>FCF Yield min (%)</label><input type="number" id="c-fcfy" step="1"></div>
 </div>
-<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-group" style="border-radius:8px;padding:10px 12px;margin-bottom:10px">
 <div class="tog-row"><span class="tog-label">ROE actif</span><label class="tog"><input type="checkbox" id="t-roe" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">BPA Croissance actif</span><label class="tog"><input type="checkbox" id="t-bpa" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">PEG actif</span><label class="tog"><input type="checkbox" id="t-peg" checked><span class="tog-sl"></span></label></div>
@@ -386,7 +403,7 @@ body.light .dash-top-item{border-color:#e2e8f0}
 <div class="cfg-item"><label>Williams %R survente</label><input type="number" id="c-willr" step="5"></div>
 <div class="cfg-item"><label>RoC min (%)</label><input type="number" id="c-roc" step="1"></div>
 </div>
-<div style="background:#0d1520;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div class="tog-group" style="border-radius:8px;padding:10px 12px;margin-bottom:10px">
 <div class="tog-row"><span class="tog-label">RSI actif</span><label class="tog"><input type="checkbox" id="t-rsi" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">MACD actif</span><label class="tog"><input type="checkbox" id="t-macd" checked><span class="tog-sl"></span></label></div>
 <div class="tog-row"><span class="tog-label">CCI actif</span><label class="tog"><input type="checkbox" id="t-cci" checked><span class="tog-sl"></span></label></div>
@@ -975,12 +992,12 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="wl-alert" id="wl-alert"></div>
 <div class="stale-banner" id="stale-banner">&#9888; Donnees potentiellement perimees — dernier scan: 01/01/2026 07:00. Weekend ou jour ferie ?</div>
 <div class="stats" id="stats"></div>
-<div class="tw" style="display:block;width:100%"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+<div class="tw" id="tw-container" style="display:block;width:100%"><div class="ts"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
 <div class="empty" id="empty" style="display:none">Aucun resultat</div></div>
 <div class="card-list" id="card-list"></div>
-<div id="card-list-opp" style="display:none;padding:0 4px"></div>
-<div id="dash-view" style="display:none;padding:4px"></div>
-<div class="disc">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
+
+<div class="disc" id="disc-banner">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
+<div id="view-container" style="padding:4px"></div>
 </div>
 <div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">
 <button class="modal-close" onclick="closeCols()">&#10005;</button>
@@ -2110,114 +2127,78 @@ function openBacktest(){
 }
 
 // ══ DASHBOARD ══
-function renderDashboard(){
-  var top5=renderTopOpportunites().slice(0,5);
-  var wlKeys=Object.keys(WATCHLIST);
-  var totalScan=typeof NSCAN!=='undefined'?NSCAN:RAW_ORIG.length;
-  var score70=RAW_ORIG.filter(function(r){return getScore(r)>=70;}).length;
-  var divVals=RAW_ORIG.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
-  divVals.sort(function(a,b){return a-b;});
-  var divMoy='N/A';
-  if(divVals.length){
-    var mid=Math.floor(divVals.length/2);
-    var median=divVals.length%2?divVals[mid]:((divVals[mid-1]+divVals[mid])/2);
-    divMoy=median.toFixed(1)+'%';
-  }
-  var rsiLow=RAW_ORIG.filter(function(r){return r.rsi&&r.rsi<=45;}).length;
-
-  // Sector distribution of top 20
-  var sectorCount={};
-  renderTopOpportunites().forEach(function(r){
-    sectorCount[r.secteur]=(sectorCount[r.secteur]||0)+1;
-  });
-  var sectorsSorted=Object.keys(sectorCount).sort(function(a,b){return sectorCount[b]-sectorCount[a];}).slice(0,5);
-  var maxSec=sectorCount[sectorsSorted[0]]||1;
-
-  var sectorBars='';
-  sectorsSorted.forEach(function(s){
-    var pct=Math.round(sectorCount[s]/maxSec*100);
-    sectorBars+='<div class="sector-bar"><span class="sector-name">'+s+'</span><div class="sector-track"><div class="sector-fill" style="width:'+pct+'%"></div></div><span class="sector-count">'+sectorCount[s]+'</span></div>';
-  });
-
-  var top5html='';
-  top5.forEach(function(r,i){
-    var sc=getScore(r);
-    var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
-    top5html+='<div class="dash-top-item"><span style="font-family:monospace;font-size:12px;font-weight:700;color:'+CURRENT_ACCENT+'">'+(i+1)+'. '+r.ticker+'</span><span style="font-family:monospace;font-size:13px;font-weight:900;color:'+c+'">'+sc+'</span></div>';
-  });
-
-  var html=
-    '<div class="dash-grid">'+
-    '<div class="dash-card"><div class="dash-card-title">Scan</div>'+
-    '<div style="font-family:monospace;font-size:24px;font-weight:900;color:'+CURRENT_ACCENT+'">'+totalScan+'</div>'+
-    '<div style="font-size:10px;color:#64748b">actions analysees</div>'+
-    '<div style="margin-top:8px;font-family:monospace;font-size:18px;font-weight:700;color:#10b981">'+score70+'</div>'+
-    '<div style="font-size:10px;color:#64748b">score 70+</div></div>'+
-
-    '<div class="dash-card"><div class="dash-card-title">Marche</div>'+
-    '<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. mediane (&le;20%)</div>'+
-    '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#8b5cf6">'+divMoy+'</div>'+
-    '<div style="font-size:10px;color:#64748b;margin-top:6px;margin-bottom:2px">RSI survente</div>'+
-    '<div style="font-family:monospace;font-size:18px;font-weight:700;color:#3b82f6">'+rsiLow+'</div></div>'+
-
-    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Top 5 Opportunites</div>'+top5html+'</div>'+
-
-    '<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Repartition sectorielle Top 20</div>'+sectorBars+'</div>'+
-    '</div>'+
-
-    '<div style="font-size:10px;color:#64748b;text-align:center;padding:8px">'+
-    'Watchlist: '+wlKeys.length+' action(s) | Scan: '+SCAN_DATE+'</div>';
-
-  document.getElementById('dash-view').innerHTML=html;
-}
 
 // ══ SETTAB UNIFIE ══
 var _origSetTabBase=setTab;
 setTab=function(t){
-  // Update tab button styles (original function)
-  _origSetTabBase(t);
-
-  var oppEl=document.getElementById('card-list-opp');
-  var dashEl=document.getElementById('dash-view');
-  var twEl=document.querySelector('.tw');
-  var clEl=document.getElementById('card-list');
-
-  // Reset all views to default
-  if(oppEl)oppEl.style.display='none';
-  if(dashEl)dashEl.style.display='none';
-  if(twEl)twEl.style.display='';
-  if(clEl)clEl.style.display='';
-
-  // Tab-specific logic
-  if(t==='opp'){
-    curTab='all'; // use all data for top opport.
-    var top=renderTopOpportunites();
-    curTab='opp';
-    if(oppEl){oppEl.style.display='block';oppEl.innerHTML=renderOppCards(top);}
-    if(twEl)twEl.style.display='none';
-    if(clEl)clEl.style.display='none';
-  } else if(t==='dash'){
-    curTab='all'; // use all data for dashboard
-    renderDashboard();
-    curTab='dash';
-    if(dashEl)dashEl.style.display='block';
-    if(twEl)twEl.style.display='none';
-    if(clEl)clEl.style.display='none';
-  } else {
+  if(t==='opp'||t==='dash'){
+    // For special tabs: use original for tab button styling only
+    // then override the view
     curTab=t;
-    render();
+    // Update all tab buttons
+    ['all','pea','div','imp','opp','dash','wl','new'].forEach(function(x){
+      var el=document.getElementById('tab-'+x);
+      if(el)el.className='tab'+(x===t?' on':'');
+    });
+    // Rebuild entire content area
+    var container=document.getElementById('view-container');
+    if(!container)return;
+    if(t==='opp'){
+      var top=renderTopOpportunites();
+      container.innerHTML='<div style="padding:4px">'+renderOppCards(top)+'</div>';
+      var discEl=document.getElementById('disc-banner');if(discEl)discEl.style.display='none';
+      var twEl2=document.getElementById('tw-container');if(twEl2)twEl2.style.display='none';
+      var clEl2=document.getElementById('card-list');if(clEl2)clEl2.style.display='none';
+    } else {
+      // Build dashboard HTML directly
+      var top5=renderTopOpportunites().slice(0,5);
+      var totalScan=typeof NSCAN!=='undefined'?NSCAN:RAW_ORIG.length;
+      var score70=RAW_ORIG.filter(function(r){return (r.score||0)>=70;}).length;
+      var divVals=RAW_ORIG.filter(function(r){return r.div&&r.div>0&&r.div<=20;}).map(function(r){return r.div;});
+      divVals.sort(function(a,b){return a-b;});
+      var divMed=divVals.length?(divVals.length%2?divVals[Math.floor(divVals.length/2)]:((divVals[Math.floor(divVals.length/2)-1]+divVals[Math.floor(divVals.length/2)])/2)).toFixed(1)+'%':'N/A';
+      var rsiLow=RAW_ORIG.filter(function(r){return r.rsi&&r.rsi<=45;}).length;
+      var sc={}; top5.forEach(function(r){sc[r.secteur]=(sc[r.secteur]||0)+1;});
+      var secs=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];}).slice(0,5);
+      var mx=secs.length?sc[secs[0]]:1;
+      var secHtml=secs.map(function(s){return '<div class="sector-bar"><span class="sector-name">'+s+'</span><div class="sector-track"><div class="sector-fill" style="width:'+Math.round(sc[s]/mx*100)+'%"></div></div><span class="sector-count">'+sc[s]+'</span></div>';}).join('');
+      var top5html=top5.map(function(r,i){var c=(r.score||0)>=70?'#10b981':(r.score||0)>=50?'#f59e0b':'#64748b';return '<div class="dash-top-item"><span style="font-family:monospace;font-size:12px;font-weight:700;color:'+CURRENT_ACCENT+'">'+(i+1)+'. '+r.ticker+'</span><span style="font-family:monospace;font-size:13px;font-weight:900;color:'+c+'">'+(r.score||0)+'</span></div>';}).join('');
+      container.innerHTML='<div class="dash-grid">'
+        +'<div class="dash-card"><div class="dash-card-title">Scan</div>'
+        +'<div style="font-family:monospace;font-size:24px;font-weight:900;color:'+CURRENT_ACCENT+'">'+totalScan+'</div>'
+        +'<div style="font-size:10px;color:#64748b">tickers dans CSV</div>'
+        +'<div style="margin-top:8px;font-family:monospace;font-size:18px;font-weight:700;color:#10b981">'+score70+'</div>'
+        +'<div style="font-size:10px;color:#64748b">score 70+ (top 300)</div></div>'
+        +'<div class="dash-card"><div class="dash-card-title">Marche</div>'
+        +'<div style="font-size:10px;color:#64748b;margin-bottom:4px">Div. mediane (&le;20%)</div>'
+        +'<div style="font-family:monospace;font-size:20px;font-weight:900;color:#8b5cf6">'+divMed+'</div>'
+        +'<div style="font-size:10px;color:#64748b;margin-top:6px;margin-bottom:2px">RSI survente</div>'
+        +'<div style="font-family:monospace;font-size:18px;font-weight:700;color:#3b82f6">'+rsiLow+'</div></div>'
+        +'<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Top 5 Opportunites</div>'+top5html+'</div>'
+        +'<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Repartition sectorielle Top 20</div>'+secHtml+'</div>'
+        +'</div>'
+        +'<div style="font-size:10px;color:#64748b;text-align:center;padding:8px">Watchlist: '+Object.keys(WATCHLIST).length+' action(s) | Scan: '+SCAN_DATE+'</div>';
+      var discEl2=document.getElementById('disc-banner');if(discEl2)discEl2.style.display='none';
+      var twEl3=document.getElementById('tw-container');if(twEl3)twEl3.style.display='none';
+      var clEl3=document.getElementById('card-list');if(clEl3)clEl3.style.display='none';
+    }
+  } else {
+    // Normal tabs (all, pea, div, imp, wl, new)
+    var container=document.getElementById('view-container');
+    if(container)container.innerHTML='';
+    // Update ALL tab buttons including wl/new
+    ['all','pea','div','imp','opp','dash','wl','new'].forEach(function(x){
+      var el=document.getElementById('tab-'+x);
+      if(el)el.className='tab'+(x===t?' on':'');
+    });
+    // Restore disc-banner
+    var discEl=document.getElementById('disc-banner');
+    if(discEl)discEl.style.display='';
+    var twEl4=document.getElementById('tw-container');if(twEl4)twEl4.style.display='';
+    var clEl4=document.getElementById('card-list');if(clEl4)clEl4.style.display='';
+    // Let original handle curTab + render
+    _origSetTabBase(t);
   }
-
-  // Update tab UI for new tabs
-  ['new','dash','opp'].forEach(function(x){
-    var el=document.getElementById('tab-'+x);
-    if(el)el.className='tab'+(t===x?' on':'');
-  });
-
-  // Update new entrants badge
-  var ne=getNewEntrants();
-  var nel=document.getElementById('b-new');
-  if(nel)nel.textContent=ne.length;
 };
 
 
