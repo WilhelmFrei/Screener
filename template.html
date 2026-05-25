@@ -972,6 +972,7 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="tab" id="tab-dash" onclick="setTab('dash')">&#128202; Dashboard <span class="bdg" id="b-dash" style="display:none"></span></div></div>
 <div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
 </div>
+<div id="normal-content">
 <div style="display:block;width:100%;margin-bottom:6px"><button onclick="toggleAdvSearch()" style="background:#0d1520;border:1px solid #1e2d45;color:#64748b;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:monospace">&#128269; Recherche avancee</button></div>
 <div class="adv-search" id="adv-search">
 <div class="adv-row"><span class="adv-lbl">RSI</span><select class="adv-op" id="adv-rsi-op"><option value="lt">&lt;</option><option value="gt">&gt;</option></select><input type="number" class="adv-val" id="adv-rsi-val" placeholder="45"></div>
@@ -997,8 +998,8 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="card-list" id="card-list"></div>
 
 <div class="disc" id="disc-banner">Donnees Yahoo Finance a titre indicatif. Ne constitue pas un conseil en investissement.</div>
+</div></div><!-- end normal-content -->
 <div id="view-container" style="padding:4px"></div>
-</div>
 <div class="modal-bg" id="modal-cols"><div class="modal" style="max-width:560px">
 <button class="modal-close" onclick="closeCols()">&#10005;</button>
 <h3>&#9638; Colonnes affichees</h3>
@@ -2146,9 +2147,9 @@ setTab=function(t){
     if(t==='opp'){
       var top=renderTopOpportunites();
       container.innerHTML='<div style="padding:4px">'+renderOppCards(top)+'</div>';
-      var discEl=document.getElementById('disc-banner');if(discEl)discEl.style.display='none';
-      var twEl2=document.getElementById('tw-container');if(twEl2)twEl2.style.display='none';
-      var clEl2=document.getElementById('card-list');if(clEl2)clEl2.style.display='none';
+      var nc=document.getElementById('normal-content');
+      if(nc)nc.style.display='none';
+      window.scrollTo({top:0,behavior:'instant'});
     } else {
       // Build dashboard HTML directly
       var top5=renderTopOpportunites().slice(0,5);
@@ -2178,9 +2179,9 @@ setTab=function(t){
         +'<div class="dash-card" style="grid-column:span 2"><div class="dash-card-title">Repartition sectorielle Top 20</div>'+secHtml+'</div>'
         +'</div>'
         +'<div style="font-size:10px;color:#64748b;text-align:center;padding:8px">Watchlist: '+Object.keys(WATCHLIST).length+' action(s) | Scan: '+SCAN_DATE+'</div>';
-      var discEl2=document.getElementById('disc-banner');if(discEl2)discEl2.style.display='none';
-      var twEl3=document.getElementById('tw-container');if(twEl3)twEl3.style.display='none';
-      var clEl3=document.getElementById('card-list');if(clEl3)clEl3.style.display='none';
+      var nc2=document.getElementById('normal-content');
+      if(nc2)nc2.style.display='none';
+      window.scrollTo({top:0,behavior:'instant'});
     }
   } else {
     // Normal tabs (all, pea, div, imp, wl, new)
@@ -2192,10 +2193,8 @@ setTab=function(t){
       if(el)el.className='tab'+(x===t?' on':'');
     });
     // Restore disc-banner
-    var discEl=document.getElementById('disc-banner');
-    if(discEl)discEl.style.display='';
-    var twEl4=document.getElementById('tw-container');if(twEl4)twEl4.style.display='';
-    var clEl4=document.getElementById('card-list');if(clEl4)clEl4.style.display='';
+    var nc3=document.getElementById('normal-content');
+    if(nc3)nc3.style.display='';
     // Let original handle curTab + render
     _origSetTabBase(t);
   }
