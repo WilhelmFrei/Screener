@@ -427,6 +427,45 @@ body.light [style*="color:#94a3b8"]{color:#94a3b8}
 body.light .adv-search-btn{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#475569!important}
 body.light .adv-search-btn:hover{background:#e2e8f0!important}
 
+
+/* Scroll to top button */
+#scroll-top-btn{
+  position:fixed;bottom:20px;right:16px;z-index:999;
+  width:40px;height:40px;border-radius:50%;
+  background:var(--accent,#00d4aa);color:#000;
+  border:none;cursor:pointer;font-size:18px;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+  display:none;align-items:center;justify-content:center;
+  transition:.2s;opacity:.85;
+}
+#scroll-top-btn:hover{opacity:1;transform:scale(1.08)}
+#scroll-top-btn.visible{display:flex}
+
+/* Live price badge */
+.live-price{font-family:monospace;font-size:10px;padding:2px 5px;border-radius:4px;
+  background:#0d1520;border:1px solid #1e2d45;color:#64748b;margin-left:4px;cursor:default}
+.live-price.up{border-color:#10b98144;color:#10b981}
+.live-price.down{border-color:#ef444444;color:#ef4444}
+.live-price.loading{color:#f59e0b;border-color:#f59e0b44}
+
+/* Top3 par secteur dans Dashboard */
+.dash-top3-sect{margin-bottom:10px}
+.dash-top3-sect-title{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.dash-top3-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #1e2d4520}
+.dash-top3-row:last-child{border:none}
+.dash-top3-tk{font-family:monospace;font-size:11px;font-weight:700;color:var(--accent,#00d4aa)}
+.dash-top3-score{font-family:monospace;font-size:12px;font-weight:900}
+.dash-evol{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #1e2d4530}
+.dash-evol:last-child{border:none}
+
+/* Light mode */
+body.light #scroll-top-btn{box-shadow:0 2px 12px rgba(0,0,0,.15)}
+body.light .live-price{background:#f8fafc;border-color:#e2e8f0;color:#64748b}
+body.light .live-price.up{border-color:#10b98166;color:#059669}
+body.light .live-price.down{border-color:#ef444466;color:#dc2626}
+body.light .dash-top3-row{border-color:#e2e8f0}
+body.light .dash-evol{border-color:#e2e8f0}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -2926,6 +2965,227 @@ function importCriteres(input){
   reader.readAsText(file);
 }
 
+// ══ SCROLL TO TOP ══
+(function(){
+  var btn = null;
+  function initScrollBtn(){
+    btn = document.getElementById('scroll-top-btn');
+    if(!btn) return;
+    window.addEventListener('scroll', function(){
+      btn.classList.toggle('visible', window.scrollY > 300);
+    }, {passive:true});
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', initScrollBtn);
+  } else {
+    setTimeout(initScrollBtn, 200);
+  }
+})();
+
+// ══ MÉMORISATION DERNIER ONGLET ══
+var LAST_TAB_KEY = 'screener_last_tab';
+var _origSetTab_memo = setTab;
+setTab = function(t){
+  _origSetTab_memo(t);
+  try{ localStorage.setItem(LAST_TAB_KEY, t); }catch(e){}
+};
+// Restore last tab after initial load
+setTimeout(function(){
+  try{
+    var last = localStorage.getItem(LAST_TAB_KEY);
+    if(last && last !== 'all' && document.getElementById('tab-'+last)){
+      setTab(last);
+    }
+  }catch(e){}
+}, 400);
+
+// ══ RACCOURCIS CLAVIER ══
+document.addEventListener('keydown', function(e){
+  // Ignore if typing in an input
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  // Ignore if a modal is open
+  if(document.querySelector('.modal-bg.open')) return;
+  var map = {'t':'all','p':'pea','d':'div','w':'wl','n':'new','1':'opp','2':'dash'};
+  if(map[e.key.toLowerCase()]){
+    e.preventDefault();
+    setTab(map[e.key.toLowerCase()]);
+  }
+});
+
+// ══ PRIX TEMPS RÉEL WATCHLIST ══
+var WL_PRICES = {};
+var WL_PRICE_LOADING = false;
+
+function fetchWLPrices(){
+  var tickers = Object.keys(WATCHLIST);
+  if(!tickers.length || WL_PRICE_LOADING) return;
+  WL_PRICE_LOADING = true;
+  
+  // Update UI to show loading
+  tickers.forEach(function(tk){
+    var badges = document.querySelectorAll('.live-price[data-tk="'+tk+'"]');
+    badges.forEach(function(b){ b.className='live-price loading'; b.textContent='...'; });
+  });
+  
+  // Yahoo Finance via cors proxy - fetch one by one with delay
+  var idx = 0;
+  function fetchNext(){
+    if(idx >= tickers.length){ WL_PRICE_LOADING=false; return; }
+    var tk = tickers[idx++];
+    var url = 'https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(tk)+'?interval=1d&range=1d';
+    fetch(url, {mode:'cors'})
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var price = null, change = null;
+        try{
+          var meta = data.chart.result[0].meta;
+          price = meta.regularMarketPrice || meta.previousClose;
+          var prev = meta.previousClose || meta.chartPreviousClose;
+          change = prev ? ((price-prev)/prev*100) : 0;
+        }catch(e){}
+        if(price !== null){
+          WL_PRICES[tk] = {price:price, change:change};
+          // Update all badges for this ticker
+          var badges = document.querySelectorAll('.live-price[data-tk="'+tk+'"]');
+          var cls = change > 0 ? 'up' : change < 0 ? 'down' : '';
+          var sign = change > 0 ? '+' : '';
+          badges.forEach(function(b){
+            b.className = 'live-price '+(cls);
+            b.textContent = price.toFixed(2)+(change!==null?' ('+sign+change.toFixed(1)+'%)':'');
+          });
+        }
+        setTimeout(fetchNext, 150); // 150ms between requests to avoid rate limit
+      })
+      .catch(function(){
+        var badges = document.querySelectorAll('.live-price[data-tk="'+tk+'"]');
+        badges.forEach(function(b){ b.className='live-price'; b.textContent='N/A'; });
+        setTimeout(fetchNext, 150);
+      });
+  }
+  fetchNext();
+}
+
+// Refresh prices button in WL tab
+var _origSetTab_wl = setTab;
+setTab = function(t){
+  _origSetTab_wl(t);
+  if(t === 'wl'){
+    setTimeout(function(){
+      // Add refresh button if WL has items
+      var wlCount = Object.keys(WATCHLIST).length;
+      if(wlCount > 0){
+        var existing = document.getElementById('wl-price-refresh');
+        if(!existing){
+          var statsEl = document.getElementById('stats');
+          if(statsEl){
+            var btn = document.createElement('button');
+            btn.id = 'wl-price-refresh';
+            btn.innerHTML = '&#128260; Prix live';
+            btn.style.cssText = 'font-size:10px;padding:4px 10px;border-radius:6px;background:#0d1520;border:1px solid #00d4aa44;color:#00d4aa;cursor:pointer;font-family:monospace;margin-bottom:6px;display:block';
+            btn.onclick = fetchWLPrices;
+            statsEl.parentNode.insertBefore(btn, statsEl);
+          }
+        }
+        // Auto-fetch prices when opening WL tab
+        fetchWLPrices();
+      }
+    }, 200);
+  }
+};
+
+// Patch renderCard to add live price badge on WL cards
+var _origRC_livePrice = renderCard;
+renderCard = function(r){
+  var html = _origRC_livePrice(r);
+  if(WATCHLIST[r.ticker]){
+    var cached = WL_PRICES[r.ticker];
+    var badgeHtml = '<span class="live-price'+(cached?(cached.change>0?' up':cached.change<0?' down':''):'')+'" data-tk="'+r.ticker+'">'+(cached?cached.price.toFixed(2)+'('+( cached.change>=0?'+':'')+cached.change.toFixed(1)+'%)':'live')+' </span>';
+    // Insert after ticker name
+    html = html.replace('class="card-tk">', 'class="card-tk">');
+    html = html.replace('<div class="card-header">', '<div class="card-header" data-tk="'+r.ticker+'">');
+    // Add badge in card header area
+    html = html.replace('</div>\n<div class="card-kv', badgeHtml+'</div>\n<div class="card-kv');
+  }
+  return html;
+};
+
+// ══ DASHBOARD: Évolution marché + Top 3 par secteur ══
+var _origSetTab_dashPlus = setTab;
+setTab = function(t){
+  _origSetTab_dashPlus(t);
+  if(t === 'dash'){
+    setTimeout(function(){
+      var vc = document.getElementById('view-container');
+      if(!vc || !vc.innerHTML) return;
+      
+      // ── Évolution marché ──
+      var avgNow = 0, count = 0;
+      RAW_ORIG.forEach(function(r){ avgNow += (r.score||0); count++; });
+      avgNow = count ? avgNow/count : 0;
+      
+      // Average of first score_history entry as "previous"
+      var avgPrev = 0, prevCount = 0;
+      RAW_ORIG.forEach(function(r){
+        if(r.score_history && r.score_history.length > 1){
+          avgPrev += r.score_history[0];
+          prevCount++;
+        }
+      });
+      avgPrev = prevCount ? avgPrev/prevCount : avgNow;
+      var mktDelta = avgNow - avgPrev;
+      var mktColor = mktDelta > 0 ? '#10b981' : mktDelta < 0 ? '#ef4444' : '#64748b';
+      var mktSign = mktDelta >= 0 ? '+' : '';
+      
+      var evolHtml = '<div style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Évolution du marché</div>'
+        +'<div style="display:flex;gap:16px;flex-wrap:wrap">'
+        +'<div class="port-stat"><div class="port-stat-lbl">Score moyen</div><div class="port-stat-val" style="color:#3b82f6">'+avgNow.toFixed(1)+'</div></div>'
+        +'<div class="port-stat"><div class="port-stat-lbl">vs scan préc.</div><div class="port-stat-val" style="color:'+mktColor+'">'+mktSign+mktDelta.toFixed(1)+'</div></div>'
+        +'<div class="port-stat"><div class="port-stat-lbl">Tickers suivis</div><div class="port-stat-val" style="color:#64748b">'+count+'</div></div>'
+        +'</div></div>';
+      
+      // ── Top 3 par secteur ──
+      var sectMap = {};
+      RAW_ORIG.forEach(function(r){
+        var s = r.secteur || 'Autre';
+        if(!sectMap[s]) sectMap[s] = [];
+        sectMap[s].push(r);
+      });
+      // Sort each sector by score
+      Object.keys(sectMap).forEach(function(s){
+        sectMap[s].sort(function(a,b){ return (b.score||0)-(a.score||0); });
+      });
+      // Sort sectors by avg score, take top 6
+      var sects = Object.keys(sectMap).sort(function(a,b){
+        var avgA = sectMap[a].reduce(function(s,r){ return s+(r.score||0); },0)/sectMap[a].length;
+        var avgB = sectMap[b].reduce(function(s,r){ return s+(r.score||0); },0)/sectMap[b].length;
+        return avgB - avgA;
+      }).slice(0,6);
+      
+      var top3Html = '<div style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Top 3 par secteur</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">';
+      
+      sects.forEach(function(s){
+        var top3 = sectMap[s].slice(0,3);
+        top3Html += '<div class="dash-top3-sect"><div class="dash-top3-sect-title">'+s+'</div>';
+        top3.forEach(function(r){
+          var sc = r.score||0;
+          var c = sc>=70?'#10b981':sc>=50?'#f59e0b':'#64748b';
+          top3Html += '<div class="dash-top3-row">'
+            +'<span class="dash-top3-tk" onclick="openYahoo&&openYahoo(\''+r.ticker+'\')" style="cursor:pointer">'+r.ticker+'</span>'
+            +'<span class="dash-top3-score" style="color:'+c+'">'+sc+'</span>'
+            +'</div>';
+        });
+        top3Html += '</div>';
+      });
+      top3Html += '</div></div>';
+      
+      vc.innerHTML += evolHtml + top3Html;
+    }, 50);
+  }
+};
+
 render();
 resetFilters();
 
@@ -2999,4 +3259,5 @@ resetFilters();
 <div id="hist-content"></div>
 <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
 </div></div>
+<button id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">&#8679;</button>
 </body></html>
