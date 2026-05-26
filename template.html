@@ -1862,46 +1862,7 @@ function exportPDF(){
   var now=new Date();
   a.download='screener_top20_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.html';
   a.click();
-}</script>
-<!-- Modal Portfolio -->
-<div class="modal-bg" id="modal-portfolio">
-<div class="modal" style="max-width:520px">
-<button class="modal-close" onclick="document.getElementById('modal-portfolio').className='modal-bg'">&#10005;</button>
-<h3>&#128184; Portfolio</h3>
-<div style="font-size:10px;color:#64748b;margin-bottom:10px">Entrez vos positions pour suivre leur evolution</div>
-<div class="port-add">
-  <input type="text" id="port-tk-input" placeholder="Ticker (ex: AAPL)" style="max-width:120px">
-  <input type="number" id="port-qty-input" placeholder="Quantite" min="0" style="max-width:100px">
-  <input type="number" id="port-price-input" placeholder="Prix achat" min="0" step="0.01" style="max-width:100px">
-  <button onclick="addPortfolioItem()" style="background:#00d4aa;color:#000;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:700">+ Ajouter</button>
-</div>
-<div class="port-summary" id="port-summary"></div>
-<div id="port-list"></div>
-<div style="display:flex;gap:8px;margin-top:12px">
-<button class="export-btn" onclick="exportPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#8659; Export CSV</button>
-<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-portfolio').className='modal-bg'" style="flex:1">Fermer</button>
-</div>
-</div></div>
-
-<!-- Modal Historique -->
-<div class="modal-bg" id="modal-hist">
-<div class="modal" style="max-width:480px">
-<button class="modal-close" onclick="document.getElementById('modal-hist').className='modal-bg'">&#10005;</button>
-<h3 id="hist-title">&#128200; Historique du score</h3>
-<div id="hist-content"></div>
-<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
-</div></div>
-
-</body></html>';
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  var now=new Date();
-  a.download='screener_top20_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.html';
-  a.click();
 }
-
-
 // ══ PATCH cH pour ajouter étoile et feu ══
 var _origCH=cH;
 cH=function(col,r){
@@ -2403,8 +2364,7 @@ function exportWatchlist(){
       r.rsi||'', r.div||'', r.per||''
     ].join(','));
   });
-  var blob = new Blob(['﻿'+rows.join('
-')], {type:'text/csv;charset=utf-8'});
+  var blob = new Blob([''+rows.join('\n')], {type:'text/csv;charset=utf-8'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'watchlist_' + new Date().toISOString().slice(0,10) + '.csv';
@@ -2467,7 +2427,7 @@ function renderPortfolio(){
     rows += '<div style="flex:1"></div>';
     rows += '<div style="text-align:right"><div class="port-pnl" style="color:'+c+'">'+(pnl>=0?'+':'')+pnlPct+'%</div>';
     rows += '<div style="font-size:9px;color:'+c+'">'+(pnl>=0?'+':'')+pnl.toFixed(0)+'</div></div>';
-    rows += '<button onclick="removePortfolioItem(''+tk+'')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px">✕</button>';
+    rows += '<button onclick="removePortfolioItem(this.dataset.tk)" data-tk="'+tk+'" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px">&#10005;</button>';
     rows += '</div>';
   });
   
@@ -2504,8 +2464,7 @@ function exportPortfolio(){
     rows.push([tk,'"'+(r?r.nom:'')+'"',p.qty,p.buyPrice.toFixed(2),curr.toFixed(2),
       invest.toFixed(2),val.toFixed(2),pnl.toFixed(2),pct,r?getScore(r):'-'].join(','));
   });
-  var blob = new Blob(['﻿'+rows.join('
-')],{type:'text/csv;charset=utf-8'});
+  var blob = new Blob([''+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   var a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='portfolio_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 }
@@ -2626,6 +2585,7 @@ render();
 resetFilters();
 
 
+</script>
 
 <!-- Modal Radar Chart -->
 <div class="modal-bg" id="modal-radar">
@@ -2692,5 +2652,4 @@ resetFilters();
 <div id="hist-content"></div>
 <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
 </div></div>
-
 </body></html>
