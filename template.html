@@ -408,6 +408,25 @@ body.light .compact-toggle.on{border-color:#00d4aa;color:#059669}
 body.light .sect-score-track{background:#e2e8f0}
 body.light .sect-score-val{color:#1e293b}
 
+
+body.light .sect-score-bar .sect-score-name{color:#475569}
+body.light .sect-score-track{background:#e2e8f0}
+body.light .sect-score-val{color:#1e293b}
+body.light .sect-score-count{color:#94a3b8}
+body.light .heatmap-pays-label{color:#475569}
+body.light .heatmap-sect-label{color:#475569}
+body.light .heatmap-cell{border:1px solid rgba(0,0,0,.08)}
+body.light .dash-card{background:#fff;border:1px solid #e2e8f0}
+body.light [style*="background:#0d1520"]{background:#f8fafc!important}
+body.light [style*="border:1px solid #1e2d45"]{border-color:#e2e8f0!important}
+body.light [style*="color:#64748b"]{color:#64748b}
+body.light [style*="color:#94a3b8"]{color:#94a3b8}
+
+
+.adv-search-btn{transition:.15s}
+body.light .adv-search-btn{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#475569!important}
+body.light .adv-search-btn:hover{background:#e2e8f0!important}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -495,6 +514,11 @@ body.light .sect-score-val{color:#1e293b}
 <div class="cfg-item"><label>Score minimum /100</label><input type="number" id="c-smin" step="5"></div>
 </div>
 <button class="modal-btn modal-btn-ok" onclick="applyCfg()">&#10003; Appliquer</button>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+<button class="export-btn" onclick="exportCriteres()" style="flex:1;background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#8659; Export</button>
+<button class="export-btn" onclick="document.getElementById('cfg-import-input').click()" style="flex:1;background:#1e2d45;color:#3b82f6;border:1px solid #3b82f633">&#8657; Import</button>
+<input type="file" id="cfg-import-input" accept=".json,.csv" style="display:none" onchange="importCriteres(this)">
+</div>
 <button class="modal-btn modal-btn-cancel" onclick="closeCfg()">Annuler</button>
 </div></div>
 <div class="modal-bg" id="modal-imp"><div class="modal">
@@ -1052,7 +1076,7 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="tab" id="tab-imp" onclick="setTab('imp')" style="display:none">Import <span class="bdg" id="b-imp">0</span></div>
 </div>
 <div id="normal-content">
-<div style="display:block;width:100%;margin-bottom:6px"><button onclick="toggleAdvSearch()" style="background:#0d1520;border:1px solid #1e2d45;color:#64748b;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:monospace">&#128269; Recherche avancee</button></div>
+<div style="display:block;width:100%;margin-bottom:6px"><button onclick="toggleAdvSearch()" class="adv-search-btn" style="background:#0d1520;border:1px solid #1e2d45;color:#64748b;font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:monospace">&#128269; Recherche avancee</button></div>
 <div class="adv-search" id="adv-search">
 <div class="adv-row"><span class="adv-lbl">RSI</span><select class="adv-op" id="adv-rsi-op"><option value="lt">&lt;</option><option value="gt">&gt;</option></select><input type="number" class="adv-val" id="adv-rsi-val" placeholder="45"></div>
 <div class="adv-row"><span class="adv-lbl">Score V</span><select class="adv-op" id="adv-sv-op"><option value="gt">&gt;</option><option value="lt">&lt;</option></select><input type="number" class="adv-val" id="adv-sv-val" placeholder="50"></div>
@@ -2822,6 +2846,86 @@ setTab = function(t){
   }
 };
 
+// ══ IMPORT PORTFOLIO ══
+function importPortfolio(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var lines = e.target.result.split('\n').filter(function(l){ return l.trim(); });
+    var imported = 0;
+    // Skip header line
+    for(var i=1; i<lines.length; i++){
+      var cols = lines[i].split(',');
+      if(cols.length < 4) continue;
+      var tk = (cols[0]||'').trim().toUpperCase();
+      var nom = (cols[1]||'').replace(/"/g,'').trim();
+      var qty = parseFloat(cols[2])||0;
+      var price = parseFloat(cols[3])||0;
+      if(!tk || qty<=0 || price<=0) continue;
+      PORTFOLIO[tk] = {qty:qty, buyPrice:price, addedScore:(function(t){
+        var r=RAW_ORIG.filter(function(x){return x.ticker===t;})[0];
+        return r?getScore(r):0;
+      })(tk)};
+      imported++;
+    }
+    savePortfolio();
+    renderPortfolio();
+    alert(imported + ' position(s) importée(s)');
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ══ EXPORT CRITÈRES ══
+function exportCriteres(){
+  var cfg = {};
+  ['perMax','pbvMax','evMax','psMax','pfcfMax','grahamMin',
+   'roeMin','crMin','deMax','fcfyMin','pegMax','bpaMin',
+   'rsiSurvente','cciSurvente','stochSurvente','adxMin','willrSurvente','rocMin',
+   'poidsValue','poidsGrowth','poidsDividende','poidsTechnique',
+   'scoreMin'].forEach(function(k){
+    var el = document.getElementById('cfg-'+k) || document.getElementById(k);
+    if(el) cfg[k] = el.value;
+  });
+  // Also get toggles
+  ['tPer','tPbv','tEv','tPs','tPfcf','tGraham','tRoe','tBpa','tPeg','tCr','tDe','tFcfy',
+   'tRsi','tMacd','tCci','tStoch','tMm','tAdx','tWillr','tRoc'].forEach(function(k){
+    var el = document.getElementById('tog-'+k);
+    if(el) cfg[k] = el.checked ? '1' : '0';
+  });
+  var json_str = JSON.stringify(cfg, null, 2);
+  var blob = new Blob([json_str], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'criteres_screener_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+// ══ IMPORT CRITÈRES ══
+function importCriteres(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var cfg = JSON.parse(e.target.result);
+      // Apply to form fields
+      Object.keys(cfg).forEach(function(k){
+        var el = document.getElementById('cfg-'+k) || document.getElementById(k);
+        if(el && el.tagName==='INPUT' && el.type==='number') el.value = cfg[k];
+        var tog = document.getElementById('tog-'+k);
+        if(tog) tog.checked = cfg[k]==='1';
+      });
+      alert('Critères importés. Cliquez Appliquer pour les enregistrer.');
+    }catch(err){
+      alert('Erreur lors de la lecture du fichier JSON: ' + err.message);
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
 render();
 resetFilters();
 
@@ -2881,6 +2985,8 @@ resetFilters();
 <div id="port-list"></div>
 <div style="display:flex;gap:8px;margin-top:12px">
 <button class="export-btn" onclick="exportPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#8659; Export CSV</button>
+<button class="export-btn" onclick="document.getElementById('port-import-input').click()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f633">&#8657; Import CSV</button>
+<input type="file" id="port-import-input" accept=".csv" style="display:none" onchange="importPortfolio(this)">
 <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-portfolio').className='modal-bg'" style="flex:1">Fermer</button>
 </div>
 </div></div>
