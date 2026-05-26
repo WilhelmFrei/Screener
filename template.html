@@ -333,6 +333,45 @@ body.light .cfg-note{color:#d97706}
 .tog-group{background:#0d1520}
 body.light .tog-group{background:#f1f5f9;border:1px solid #e2e8f0}
 
+
+/* Portfolio */
+.port-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1e2d45}
+.port-row:last-child{border:none}
+.port-tk{font-family:monospace;font-size:13px;font-weight:900;color:#00d4aa;min-width:70px}
+.port-nom{font-size:10px;color:#64748b}
+.port-pnl{font-family:monospace;font-size:14px;font-weight:900;min-width:70px;text-align:right}
+.port-input{width:80px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-size:11px;padding:4px 6px;border-radius:5px;font-family:monospace;text-align:right}
+.port-add{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.port-add input{flex:1;min-width:80px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-size:11px;padding:6px 8px;border-radius:6px}
+.port-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.port-stat{background:#0d1520;border-radius:8px;padding:8px 10px;text-align:center}
+.port-stat-lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+.port-stat-val{font-family:monospace;font-size:16px;font-weight:900;margin-top:2px}
+
+/* Historique graphique */
+.hist-chart{width:100%;height:120px;display:block}
+.hist-chart-wrap{background:#0d1520;border-radius:8px;padding:10px;margin-top:8px}
+.hist-label{font-size:9px;fill:#64748b;font-family:monospace}
+.hist-line{fill:none;stroke-width:1.5;stroke-linejoin:round}
+.hist-dot{r:3}
+
+/* Export WL */
+.export-btn{font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-family:monospace;margin-right:6px;margin-bottom:6px}
+
+/* Pays filter */
+.pays-filter{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.pays-chip{font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #1e2d45;background:#0d1520;color:#64748b;cursor:pointer;font-family:monospace;transition:.15s}
+.pays-chip.on{background:#00d4aa18;border-color:#00d4aa;color:#00d4aa}
+
+/* Light mode */
+body.light .port-row{border-color:#e2e8f0}
+body.light .port-input{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .port-add input{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .port-stat{background:#f8fafc}
+body.light .hist-chart-wrap{background:#f8fafc}
+body.light .pays-chip{background:#f1f5f9;border-color:#e2e8f0;color:#64748b}
+body.light .pays-chip.on{background:#e0fdf4;border-color:#00d4aa;color:#059669}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -345,6 +384,8 @@ body.light .tog-group{background:#f1f5f9;border:1px solid #e2e8f0}
 <button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>
 <button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
+<button class="hbtn" onclick="openPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#128184; Portfolio</button>
+<button class="hbtn" onclick="exportWatchlist()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33">&#11088; Export WL</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
 <button class="hbtn" onclick="resetFilters()" style="background:#1e2d45;color:#64748b;border:1px solid #64748b44" title="Reinitialiser tous les filtres">&#10006; Filtres</button>
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
@@ -958,6 +999,7 @@ Le score sur 100 combine quatre dimensions pondereables. Chaque sous-score est c
 <div class="filters">
 <div class="fg"><label>Recherche</label><input type="text" id="q" oninput="render()" placeholder="Ticker..." style="width:120px"></div>
 <div class="fg"><label>Marche</label><select id="mkt" onchange="render()"><option value="all">Tous</option><option value="eu">Europe</option><option value="us">USA</option><option value="ca">Canada</option><option value="other">Autres</option></select></div>
+<div class="fg" id="pays-filter-wrap" style="display:none"><label>Pays</label><div class="pays-filter" id="pays-chips"></div></div>
 <div class="fg"><label>Secteur</label><select id="sect" onchange="render()"></select></div>
 <div class="fg"><label>Score min</label><input type="number" id="ms" value="35" min="0" max="100" step="5" onchange="render()" style="width:60px"></div>
 <div class="fg"><label>PEA seul.</label><select id="peaOnly" onchange="render()"><option value="0">Non</option><option value="1">Oui</option></select></div>
@@ -1813,7 +1855,44 @@ function exportPDF(){
     +'<table><thead><tr>'
     +'<th>#</th><th>Ticker</th><th>Nom</th><th>Score</th><th>PER</th><th>ROE</th><th>Div</th><th>RSI</th><th>Signal</th><th>Secteur</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement</p></body></html>';
+    +'<p style="margin-top:16px;font-size:10px;color:#94a3b8">Donnees Yahoo Finance - indicatif uniquement<\/p><\/body><\/html>';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  var now=new Date();
+  a.download='screener_top20_'+now.getFullYear()+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+now.getDate()+'.html';
+  a.click();
+}</script>
+<!-- Modal Portfolio -->
+<div class="modal-bg" id="modal-portfolio">
+<div class="modal" style="max-width:520px">
+<button class="modal-close" onclick="document.getElementById('modal-portfolio').className='modal-bg'">&#10005;</button>
+<h3>&#128184; Portfolio</h3>
+<div style="font-size:10px;color:#64748b;margin-bottom:10px">Entrez vos positions pour suivre leur evolution</div>
+<div class="port-add">
+  <input type="text" id="port-tk-input" placeholder="Ticker (ex: AAPL)" style="max-width:120px">
+  <input type="number" id="port-qty-input" placeholder="Quantite" min="0" style="max-width:100px">
+  <input type="number" id="port-price-input" placeholder="Prix achat" min="0" step="0.01" style="max-width:100px">
+  <button onclick="addPortfolioItem()" style="background:#00d4aa;color:#000;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:700">+ Ajouter</button>
+</div>
+<div class="port-summary" id="port-summary"></div>
+<div id="port-list"></div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="export-btn" onclick="exportPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#8659; Export CSV</button>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-portfolio').className='modal-bg'" style="flex:1">Fermer</button>
+</div>
+</div></div>
+
+<!-- Modal Historique -->
+<div class="modal-bg" id="modal-hist">
+<div class="modal" style="max-width:480px">
+<button class="modal-close" onclick="document.getElementById('modal-hist').className='modal-bg'">&#10005;</button>
+<h3 id="hist-title">&#128200; Historique du score</h3>
+<div id="hist-content"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+</body></html>';
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -2271,10 +2350,282 @@ function resetFilters(){
   render();
 }
 
+// ══ FILTRE PAYS ══
+var PAYS_FILTER = new Set();
+
+function buildPaysFilter(){
+  var pays_count = {};
+  RAW_ORIG.forEach(function(r){ if(r.pays) pays_count[r.pays] = (pays_count[r.pays]||0)+1; });
+  var pays_sorted = Object.keys(pays_count).sort(function(a,b){ return pays_count[b]-pays_count[a]; });
+  
+  var wrap = document.getElementById('pays-filter-wrap');
+  var chips = document.getElementById('pays-chips');
+  if(!chips || pays_sorted.length < 2){ if(wrap) wrap.style.display='none'; return; }
+  
+  if(wrap) wrap.style.display='';
+  chips.innerHTML = '';
+  pays_sorted.forEach(function(p){
+    var el = document.createElement('span');
+    el.className = 'pays-chip' + (PAYS_FILTER.has(p) ? ' on' : '');
+    el.textContent = p + ' (' + pays_count[p] + ')';
+    el.onclick = function(){
+      if(PAYS_FILTER.has(p)){ PAYS_FILTER.delete(p); el.classList.remove('on'); }
+      else { PAYS_FILTER.add(p); el.classList.add('on'); }
+      render();
+    };
+    chips.appendChild(el);
+  });
+}
+setTimeout(buildPaysFilter, 300);
+
+// Patch doFilter for pays
+var _origDoFilter_pays = doFilter;
+doFilter = function(){
+  var data = _origDoFilter_pays();
+  if(PAYS_FILTER.size > 0){
+    data = data.filter(function(r){ return PAYS_FILTER.has(r.pays); });
+  }
+  return data;
+};
+
+// ══ EXPORT WATCHLIST ══
+function exportWatchlist(){
+  var keys = Object.keys(WATCHLIST);
+  if(!keys.length){ alert('Watchlist vide.'); return; }
+  var rows = ['Ticker,Nom,Secteur,Pays,Score actuel,Score ajout,Delta,RSI,Div%,PER'];
+  keys.forEach(function(tk){
+    var r = RAW_ORIG.filter(function(x){ return x.ticker===tk; })[0];
+    if(!r) return;
+    var curr = getScore(r), prev = parseInt(WATCHLIST[tk])||0;
+    rows.push([
+      r.ticker, '"'+(r.nom||'')+'"', r.secteur||'', r.pays||'',
+      curr, prev, curr-prev,
+      r.rsi||'', r.div||'', r.per||''
+    ].join(','));
+  });
+  var blob = new Blob(['﻿'+rows.join('
+')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'watchlist_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ══ PORTFOLIO ══
+var PORTFOLIO_KEY = 'screener_portfolio_v1';
+var PORTFOLIO = {};
+
+function loadPortfolio(){
+  try{ var r=localStorage.getItem(PORTFOLIO_KEY); if(r) PORTFOLIO=JSON.parse(r); }catch(e){}
+}
+function savePortfolio(){
+  try{ localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(PORTFOLIO)); }catch(e){}
+}
+loadPortfolio();
+
+function addPortfolioItem(){
+  var tk = (document.getElementById('port-tk-input').value||'').toUpperCase().trim();
+  var qty = parseFloat(document.getElementById('port-qty-input').value)||0;
+  var price = parseFloat(document.getElementById('port-price-input').value)||0;
+  if(!tk||qty<=0||price<=0){ alert('Remplissez tous les champs.'); return; }
+  PORTFOLIO[tk] = {qty:qty, buyPrice:price, addedScore: (function(){
+    var r=RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
+    return r?getScore(r):0;
+  })()};
+  savePortfolio();
+  document.getElementById('port-tk-input').value='';
+  document.getElementById('port-qty-input').value='';
+  document.getElementById('port-price-input').value='';
+  renderPortfolio();
+}
+
+function removePortfolioItem(tk){
+  delete PORTFOLIO[tk];
+  savePortfolio();
+  renderPortfolio();
+}
+
+function renderPortfolio(){
+  var keys = Object.keys(PORTFOLIO);
+  var totalInvest=0, totalVal=0, totalPnl=0;
+  var rows = '';
+  
+  keys.forEach(function(tk){
+    var p = PORTFOLIO[tk];
+    var r = RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
+    var currPrice = r ? (r.prix||p.buyPrice) : p.buyPrice;
+    var invest = p.qty * p.buyPrice;
+    var val = p.qty * currPrice;
+    var pnl = val - invest;
+    var pnlPct = ((currPrice-p.buyPrice)/p.buyPrice*100).toFixed(1);
+    totalInvest += invest; totalVal += val; totalPnl += pnl;
+    var c = pnl>=0?'#10b981':'#ef4444';
+    var score = r?getScore(r):'-';
+    rows += '<div class="port-row">';
+    rows += '<div><div class="port-tk">'+tk+'</div><div class="port-nom">'+(r?r.nom:'N/A')+'</div>';
+    rows += '<div style="font-size:9px;color:#64748b">'+p.qty+' @ '+p.buyPrice.toFixed(2)+' | Score: '+score+'</div></div>';
+    rows += '<div style="flex:1"></div>';
+    rows += '<div style="text-align:right"><div class="port-pnl" style="color:'+c+'">'+(pnl>=0?'+':'')+pnlPct+'%</div>';
+    rows += '<div style="font-size:9px;color:'+c+'">'+(pnl>=0?'+':'')+pnl.toFixed(0)+'</div></div>';
+    rows += '<button onclick="removePortfolioItem(''+tk+'')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px">✕</button>';
+    rows += '</div>';
+  });
+  
+  // Summary
+  var pnlTot = totalVal-totalInvest;
+  var pnlPctTot = totalInvest>0?((pnlTot/totalInvest)*100).toFixed(1):'0';
+  var c2 = pnlTot>=0?'#10b981':'#ef4444';
+  var sumHtml = '';
+  if(keys.length){
+    sumHtml = '<div class="port-stat"><div class="port-stat-lbl">Investi</div><div class="port-stat-val" style="color:#64748b">'+totalInvest.toFixed(0)+'</div></div>';
+    sumHtml += '<div class="port-stat"><div class="port-stat-lbl">Valeur</div><div class="port-stat-val" style="color:#3b82f6">'+totalVal.toFixed(0)+'</div></div>';
+    sumHtml += '<div class="port-stat"><div class="port-stat-lbl">P&L</div><div class="port-stat-val" style="color:'+c2+'">'+(pnlTot>=0?'+':'')+pnlPctTot+'%</div></div>';
+  }
+  
+  document.getElementById('port-summary').innerHTML = sumHtml;
+  document.getElementById('port-list').innerHTML = rows || '<div style="color:#64748b;font-size:12px;text-align:center;padding:16px">Aucune position. Ajoutez un ticker ci-dessus.</div>';
+}
+
+function openPortfolio(){
+  renderPortfolio();
+  document.getElementById('modal-portfolio').className='modal-bg open';
+}
+
+function exportPortfolio(){
+  var keys = Object.keys(PORTFOLIO);
+  if(!keys.length){ alert('Portfolio vide.'); return; }
+  var rows = ['Ticker,Nom,Quantite,Prix achat,Prix actuel,Invest.,Valeur,P&L,P&L%,Score'];
+  keys.forEach(function(tk){
+    var p = PORTFOLIO[tk];
+    var r = RAW_ORIG.filter(function(x){return x.ticker===tk;})[0];
+    var curr = r?(r.prix||p.buyPrice):p.buyPrice;
+    var invest = p.qty*p.buyPrice, val=p.qty*curr, pnl=val-invest;
+    var pct = ((curr-p.buyPrice)/p.buyPrice*100).toFixed(2);
+    rows.push([tk,'"'+(r?r.nom:'')+'"',p.qty,p.buyPrice.toFixed(2),curr.toFixed(2),
+      invest.toFixed(2),val.toFixed(2),pnl.toFixed(2),pct,r?getScore(r):'-'].join(','));
+  });
+  var blob = new Blob(['﻿'+rows.join('
+')],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='portfolio_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+// ══ HISTORIQUE GRAPHIQUE ══
+function openHistorique(ticker){
+  var rows = RAW_ORIG.filter(function(r){ return r.ticker===ticker; });
+  if(!rows.length) return;
+  var r = rows[0];
+  var hist = r.score_history||[];
+  
+  document.getElementById('hist-title').textContent = '📈 Historique — ' + ticker + ' / ' + r.nom;
+  
+  if(hist.length < 2){
+    document.getElementById('hist-content').innerHTML = '<div style="color:#64748b;padding:16px;text-align:center">Pas assez de données historiques (minimum 2 scans).</div>';
+    document.getElementById('modal-hist').className='modal-bg open';
+    return;
+  }
+  
+  // Build SVG chart
+  var W=420, H=140, pad=30;
+  var mn=Math.min.apply(null,hist)-5, mx=Math.max.apply(null,hist)+5;
+  var rng=mx-mn||1, n=hist.length;
+  var chartW=W-pad*2, chartH=H-pad*2;
+  
+  var pts = hist.map(function(v,i){
+    return [pad+i*(chartW/(n-1)), pad+chartH-(v-mn)/rng*chartH];
+  });
+  
+  var path = pts.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+  var last = hist[hist.length-1], first=hist[0];
+  var color = last>first?'#10b981':last<first?'#ef4444':'#64748b';
+  
+  // Grid lines
+  var grid='';
+  [25,50,75,100].forEach(function(v){
+    if(v>=mn&&v<=mx){
+      var y = pad+chartH-(v-mn)/rng*chartH;
+      grid+='<line x1="'+pad+'" y1="'+y.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y.toFixed(1)+'" stroke="#1e2d45" stroke-width="0.5"/>';
+      grid+='<text x="'+(pad-4)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" class="hist-label">'+v+'</text>';
+    }
+  });
+  
+  // X axis labels (first, middle, last)
+  var xLabels='';
+  [0, Math.floor(n/2), n-1].forEach(function(i){
+    if(i < n){
+      xLabels+='<text x="'+pts[i][0].toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" class="hist-label">J-'+(n-1-i)+'</text>';
+    }
+  });
+  
+  // Area fill
+  var areaPath = path + ' L'+(W-pad)+' '+(pad+chartH)+' L'+pad+' '+(pad+chartH)+' Z';
+  
+  var svg = '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
+  svg += grid + xLabels;
+  svg += '<path d="'+areaPath+'" fill="'+color+'10" stroke="none"/>';
+  svg += '<path d="'+path+'" class="hist-line" stroke="'+color+'"/>';
+  pts.forEach(function(p,i){
+    svg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+color+'"/>';
+    if(i===n-1||i===0){
+      svg+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-6).toFixed(1)+'" text-anchor="middle" class="hist-label" style="fill:'+color+';font-weight:700">'+hist[i]+'</text>';
+    }
+  });
+  svg += '</svg>';
+  
+  // Delta info
+  var delta = last-first;
+  var dc = delta>0?'#10b981':delta<0?'#ef4444':'#64748b';
+  var info = '<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">';
+  info += '<div class="port-stat"><div class="port-stat-lbl">Score actuel</div><div class="port-stat-val" style="color:'+color+'">'+last+'</div></div>';
+  info += '<div class="port-stat"><div class="port-stat-lbl">Évolution</div><div class="port-stat-val" style="color:'+dc+'">'+(delta>0?'+':'')+delta+'pts</div></div>';
+  info += '<div class="port-stat"><div class="port-stat-lbl">Jours</div><div class="port-stat-val" style="color:#64748b">'+n+'</div></div>';
+  info += '</div>';
+  
+  document.getElementById('hist-content').innerHTML = '<div class="hist-chart-wrap">'+svg+'</div>'+info;
+  document.getElementById('modal-hist').className='modal-bg open';
+}
+
+// ══ PATCH cH pour ajouter bouton historique ══
+var _origCH_hist = cH;
+cH = function(col, r){
+  if(col==='ticker'){
+    var tg='';
+    if(r.pea) tg+='<span class="ptag">PEA</span>';
+    if(r._imported) tg+='<span class="imptag">IMP</span>';
+    if(isNew&&isNew(r)) tg+='<span class="new-badge">NEW</span>';
+    var co=CMP_SET[r.ticker]?'on':'';
+    var wlOn=WATCHLIST[r.ticker]?'on':'';
+    var tk=r.ticker;
+    var delta = (function(){ var d=getDelta&&getDelta(r); return d!==null&&d!==undefined?deltaBadge&&deltaBadge(r):''; })();
+    return '<div>'
+      +'<span class="tk" style="cursor:pointer" onclick="openYahoo(this.dataset.tk)" data-tk="'+tk+'">'+tk+'</span>'
+      +tg+delta
+      +'<button class="cmp-btn '+co+'" onclick="toggleCmp(this.dataset.tk,this)" data-tk="'+tk+'">&#9878;</button>'
+      +'<button class="star-btn '+wlOn+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+tk+'" title="Watchlist">&#11088;</button>'
+      +'<button onclick="openRadar&&openRadar(this.dataset.tk)" data-tk="'+tk+'" style="font-size:10px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px" title="Radar">&#127919;</button>'
+      +'<button onclick="openHistorique(this.dataset.tk)" data-tk="'+tk+'" style="font-size:10px;background:none;border:none;cursor:pointer;color:#3b82f6;padding:0 2px" title="Historique">&#128200;</button>'
+      +'</div>'
+      +'<div class="nm">'+r.nom+'</div>'
+      +'<div class="ct">'+r.pays+' - '+r.secteur+'</div>';
+  }
+  return _origCH_hist(col, r);
+};
+
+// Also add to renderCard (mobile)
+var _origRenderCard_hist = renderCard;
+renderCard = function(r){
+  var html = _origRenderCard_hist(r);
+  // Add historique button after radar button in card header
+  return html.replace(
+    'data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button>',
+    'data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button><button onclick="openHistorique(this.dataset.tk)" data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#3b82f6;padding:0 2px">&#128200;</button>'
+  );
+};
+
 render();
 resetFilters();
 
-</script>
+
 
 <!-- Modal Radar Chart -->
 <div class="modal-bg" id="modal-radar">
@@ -2310,6 +2661,36 @@ resetFilters();
 <button onclick="if(document.body.classList.contains('light'))toggleTheme()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e2d45;background:#0a0e1a;color:#e2e8f0;cursor:pointer;font-size:12px">&#9790; Sombre</button>
 </div>
 <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-theme').className='modal-bg'" style="margin-top:12px">Fermer</button>
+</div></div>
+
+
+<!-- Modal Portfolio -->
+<div class="modal-bg" id="modal-portfolio">
+<div class="modal" style="max-width:520px">
+<button class="modal-close" onclick="document.getElementById('modal-portfolio').className='modal-bg'">&#10005;</button>
+<h3>&#128184; Portfolio</h3>
+<div style="font-size:10px;color:#64748b;margin-bottom:10px">Entrez vos positions pour suivre leur evolution</div>
+<div class="port-add">
+  <input type="text" id="port-tk-input" placeholder="Ticker (ex: AAPL)" style="max-width:120px">
+  <input type="number" id="port-qty-input" placeholder="Quantite" min="0" style="max-width:100px">
+  <input type="number" id="port-price-input" placeholder="Prix achat" min="0" step="0.01" style="max-width:100px">
+  <button onclick="addPortfolioItem()" style="background:#00d4aa;color:#000;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:700">+ Ajouter</button>
+</div>
+<div class="port-summary" id="port-summary"></div>
+<div id="port-list"></div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="export-btn" onclick="exportPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#8659; Export CSV</button>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-portfolio').className='modal-bg'" style="flex:1">Fermer</button>
+</div>
+</div></div>
+
+<!-- Modal Historique -->
+<div class="modal-bg" id="modal-hist">
+<div class="modal" style="max-width:480px">
+<button class="modal-close" onclick="document.getElementById('modal-hist').className='modal-bg'">&#10005;</button>
+<h3 id="hist-title">&#128200; Historique du score</h3>
+<div id="hist-content"></div>
+<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
 </div></div>
 
 </body></html>
