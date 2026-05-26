@@ -1474,8 +1474,19 @@ function cH(col,r){
   if(col==='adx')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>=25?'#00d4aa':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
   if(col==='willr')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v<=-80?'#10b981':v>=-20?'#ef4444':'#94a3b8')+'">'+Math.round(v)+'</span>':'-';
   if(col==='roc')return v!==null?'<span style="font-family:monospace;font-size:11px;color:'+(v>5?'#10b981':v>0?'#f59e0b':'#ef4444')+'">'+(v>0?'+':'')+parseFloat(v).toFixed(1)+'%</span>':'-';
+  if(col==='spark')return sparkSVG(r.sparkline);
   if(col==='mm20'||col==='mm50'||col==='mm200')return mmC(v);
   if(col==='signaux'){if(!v)return '-';var ps=v.split('|'),h2='',ii;for(ii=0;ii<ps.length;ii++){var s2=ps[ii].trim();if(s2)h2+='<span class="chip">'+s2+'</span>';}return h2||'-';}
+  if(col==='prix'){
+    var lp=WL_PRICES&&WL_PRICES[r.ticker];
+    if(lp){
+      var cls2=lp.change>0?'#10b981':lp.change<0?'#ef4444':'#94a3b8';
+      var sign2=lp.change>=0?'+':'';
+      return '<span style="font-family:monospace;font-size:11px">'+lp.price.toFixed(2)+'</span>'
+        +'<span style="font-size:9px;color:'+cls2+';margin-left:3px">('+sign2+lp.change.toFixed(1)+'%)</span>';
+    }
+    return v!==null&&v!==undefined?'<span style="font-family:monospace;font-size:11px">'+parseFloat(v).toFixed(2)+'</span>':'-';
+  }
   return v!==null&&v!==undefined?String(v):'-';
 }
 
@@ -1552,7 +1563,7 @@ function renderCard(r){
       +'<button class="star-btn '+wlOn2+'" onclick="toggleStar(this.dataset.tk,this)" data-tk="'+ r.ticker +'" style="font-size:15px;padding:0 2px">&#11088;</button>'
       +'<button onclick="openRadar(this.dataset.tk)" data-tk="'+ r.ticker +'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button>'
     +'</div>'
-    +'<div style="text-align:right"><span class="card-score" style="color:'+c+'">'+sc+'</span>'
+    +'<div style="text-align:right">'      +(WL_PRICES&&WL_PRICES[r.ticker]?'<span class="live-price'+(WL_PRICES[r.ticker].change>0?' up':WL_PRICES[r.ticker].change<0?' down':'')+'" data-tk="'+r.ticker+'" style="display:block;text-align:right;margin-bottom:2px">'+WL_PRICES[r.ticker].price.toFixed(2)+' ('+(WL_PRICES[r.ticker].change>=0?'+':'')+WL_PRICES[r.ticker].change.toFixed(1)+'%)</span>':'')      +'<span class="card-score" style="color:'+c+'">'+sc+'</span>'
       +(mom>=50?'<div style="font-size:9px;color:#3b82f6;font-family:monospace">Mom:'+mom+'</div>':'')
     +'</div></div>'
     +'<div class="card-nom">'+r.nom+'</div>'
@@ -3032,10 +3043,12 @@ function fetchWLPrices(){
   function fetchNext(){
     if(idx >= tickers.length){ WL_PRICE_LOADING=false; return; }
     var tk = tickers[idx++];
-    var url = 'https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(tk)+'?interval=1d&range=1d';
-    fetch(url, {mode:'cors'})
+    var yUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(tk)+'?interval=1d&range=1d&corsDomain=finance.yahoo.com';
+    var url = 'https://api.allorigins.win/get?url='+encodeURIComponent(yUrl);
+    fetch(url)
       .then(function(r){ return r.json(); })
-      .then(function(data){
+      .then(function(wrapper){
+        var data = JSON.parse(wrapper.contents);
         var price = null, change = null;
         try{
           var meta = data.chart.result[0].meta;
@@ -3065,49 +3078,9 @@ function fetchWLPrices(){
   fetchNext();
 }
 
-// Refresh prices button in WL tab
-var _origSetTab_wl = setTab;
-setTab = function(t){
-  _origSetTab_wl(t);
-  if(t === 'wl'){
-    setTimeout(function(){
-      // Add refresh button if WL has items
-      var wlCount = Object.keys(WATCHLIST).length;
-      if(wlCount > 0){
-        var existing = document.getElementById('wl-price-refresh');
-        if(!existing){
-          var statsEl = document.getElementById('stats');
-          if(statsEl){
-            var btn = document.createElement('button');
-            btn.id = 'wl-price-refresh';
-            btn.innerHTML = '&#128260; Prix live';
-            btn.style.cssText = 'font-size:10px;padding:4px 10px;border-radius:6px;background:#0d1520;border:1px solid #00d4aa44;color:#00d4aa;cursor:pointer;font-family:monospace;margin-bottom:6px;display:block';
-            btn.onclick = fetchWLPrices;
-            statsEl.parentNode.insertBefore(btn, statsEl);
-          }
-        }
-        // Auto-fetch prices when opening WL tab
-        fetchWLPrices();
-      }
-    }, 200);
-  }
-};
 
-// Patch renderCard to add live price badge on WL cards
-var _origRC_livePrice = renderCard;
-renderCard = function(r){
-  var html = _origRC_livePrice(r);
-  if(WATCHLIST[r.ticker]){
-    var cached = WL_PRICES[r.ticker];
-    var badgeHtml = '<span class="live-price'+(cached?(cached.change>0?' up':cached.change<0?' down':''):'')+'" data-tk="'+r.ticker+'">'+(cached?cached.price.toFixed(2)+'('+( cached.change>=0?'+':'')+cached.change.toFixed(1)+'%)':'live')+' </span>';
-    // Insert after ticker name
-    html = html.replace('class="card-tk">', 'class="card-tk">');
-    html = html.replace('<div class="card-header">', '<div class="card-header" data-tk="'+r.ticker+'">');
-    // Add badge in card header area
-    html = html.replace('</div>\n<div class="card-kv', badgeHtml+'</div>\n<div class="card-kv');
-  }
-  return html;
-};
+
+
 
 // ══ DASHBOARD: Évolution marché + Top 3 par secteur ══
 var _origSetTab_dashPlus = setTab;
@@ -3183,6 +3156,116 @@ setTab = function(t){
       
       vc.innerHTML += evolHtml + top3Html;
     }, 50);
+  }
+};
+
+// ══ PRIX TEMPS RÉEL WATCHLIST (v2) ══
+var WL_PRICES = {};
+var WL_PRICE_LOADING = false;
+
+function updateLivePriceBadges(){
+  // Met à jour les badges déjà dans le DOM
+  Object.keys(WL_PRICES).forEach(function(tk){
+    var d = WL_PRICES[tk];
+    document.querySelectorAll('.live-price[data-tk="'+tk+'"]').forEach(function(b){
+      var cls = d.change > 0 ? 'up' : d.change < 0 ? 'down' : '';
+      b.className = 'live-price ' + cls;
+      b.textContent = d.price.toFixed(2) + ' (' + (d.change>=0?'+':'') + d.change.toFixed(1) + '%)';
+    });
+  });
+}
+
+function fetchWLPrices(){
+  var tickers = Object.keys(WATCHLIST);
+  if(!tickers.length){ alert('Watchlist vide.'); return; }
+  if(WL_PRICE_LOADING){ alert('Chargement en cours...'); return; }
+  WL_PRICE_LOADING = true;
+
+  // Show loading on button
+  var btn = document.getElementById('wl-price-refresh');
+  if(btn){ btn.textContent = '⏳ Chargement...'; btn.disabled = true; }
+
+  // Mark all badges as loading
+  tickers.forEach(function(tk){
+    document.querySelectorAll('.live-price[data-tk="'+tk+'"]').forEach(function(b){
+      b.className = 'live-price loading'; b.textContent = '...';
+    });
+  });
+
+  var idx = 0, errors = 0;
+  function fetchNext(){
+    if(idx >= tickers.length){
+      WL_PRICE_LOADING = false;
+      if(btn){ btn.innerHTML = '&#128260; Prix live'; btn.disabled = false; }
+      var msg = (tickers.length - errors) + '/' + tickers.length + ' prix mis à jour';
+      if(errors) msg += ' (' + errors + ' erreur(s))';
+      // Show brief toast
+      var toast = document.createElement('div');
+      toast.textContent = msg;
+      toast.style.cssText = 'position:fixed;bottom:70px;right:16px;background:#0d1520;border:1px solid #00d4aa44;color:#00d4aa;padding:6px 12px;border-radius:8px;font-family:monospace;font-size:10px;z-index:9999;transition:.3s';
+      document.body.appendChild(toast);
+      setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); },300); }, 2500);
+      return;
+    }
+    var tk = tickers[idx++];
+    var yUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(tk) + '?interval=1d&range=1d&corsDomain=finance.yahoo.com';
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(yUrl);
+
+    fetch(proxyUrl)
+      .then(function(resp){ return resp.json(); })
+      .then(function(wrapper){
+        var data = JSON.parse(wrapper.contents);
+        var meta = data.chart.result[0].meta;
+        var price = meta.regularMarketPrice || meta.previousClose;
+        var prev  = meta.previousClose || meta.chartPreviousClose || price;
+        var change = prev ? ((price - prev) / prev * 100) : 0;
+        WL_PRICES[tk] = {price: price, change: change};
+        // Update badges in DOM immediately
+        document.querySelectorAll('.live-price[data-tk="'+tk+'"]').forEach(function(b){
+          var cls = change > 0 ? 'up' : change < 0 ? 'down' : '';
+          b.className = 'live-price ' + cls;
+          b.textContent = price.toFixed(2) + ' (' + (change>=0?'+':'') + change.toFixed(1) + '%)';
+        });
+        setTimeout(fetchNext, 200);
+      })
+      .catch(function(e){
+        errors++;
+        document.querySelectorAll('.live-price[data-tk="'+tk+'"]').forEach(function(b){
+          b.className = 'live-price'; b.textContent = 'N/A';
+        });
+        setTimeout(fetchNext, 200);
+      });
+  }
+  fetchNext();
+}
+
+
+
+// Ajoute bouton Prix live dans le header WL (view-container)
+var _origSetTab_wlv2 = setTab;
+setTab = function(t){
+  _origSetTab_wlv2(t);
+  // Remove prix live button when leaving WL
+  if(t !== 'wl'){
+    var oldBtn = document.getElementById('wl-price-refresh');
+    if(oldBtn) oldBtn.remove();
+  }
+  if(t === 'wl'){
+    setTimeout(function(){
+      if(!Object.keys(WATCHLIST).length) return;
+      if(document.getElementById('wl-price-refresh')) return;
+      // Insert button in stats bar area (visible in WL view)
+      var statsEl = document.getElementById('stats');
+      if(!statsEl) return;
+      var btn = document.createElement('button');
+      btn.id = 'wl-price-refresh';
+      btn.innerHTML = '&#128260; Prix live';
+      btn.style.cssText = 'font-size:10px;padding:5px 12px;border-radius:6px;'
+        +'background:#0d1520;border:1px solid #00d4aa44;color:#00d4aa;'
+        +'cursor:pointer;font-family:monospace;font-weight:700;margin-bottom:8px;display:block';
+      btn.onclick = fetchWLPrices;
+      statsEl.parentNode.insertBefore(btn, statsEl.nextSibling);
+    }, 150);
   }
 };
 
