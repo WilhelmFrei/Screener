@@ -372,6 +372,42 @@ body.light .hist-chart-wrap{background:#f8fafc}
 body.light .pays-chip{background:#f1f5f9;border-color:#e2e8f0;color:#64748b}
 body.light .pays-chip.on{background:#e0fdf4;border-color:#00d4aa;color:#059669}
 
+
+/* Vue condensée */
+.card.compact{padding:8px 10px}
+.card.compact .card-kv-grid{grid-template-columns:repeat(4,1fr)}
+.card.compact .sparkline-wrap{display:none}
+.card.compact .card-sigs{display:none}
+.compact-toggle{font-size:10px;padding:4px 8px;border-radius:6px;background:#0d1520;border:1px solid #1e2d45;color:#64748b;cursor:pointer;font-family:monospace}
+.compact-toggle.on{border-color:#00d4aa;color:#00d4aa}
+
+/* Scores sectoriels */
+.sect-score-bar{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.sect-score-name{font-size:10px;color:#94a3b8;width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.sect-score-track{flex:1;height:8px;background:#1e2d45;border-radius:4px;overflow:hidden;position:relative}
+.sect-score-fill{height:100%;border-radius:4px;transition:width .3s}
+.sect-score-val{font-size:10px;font-family:monospace;color:#e2e8f0;width:28px;text-align:right;flex-shrink:0}
+.sect-score-count{font-size:9px;color:#64748b;width:20px;text-align:right;flex-shrink:0}
+
+/* Heatmap */
+.heatmap-grid{display:grid;gap:3px;margin-top:8px}
+.heatmap-cell{border-radius:4px;padding:4px 6px;cursor:pointer;transition:.2s;min-height:36px;display:flex;flex-direction:column;justify-content:space-between}
+.heatmap-cell:hover{opacity:.8;transform:scale(1.02)}
+.heatmap-cell-pays{font-size:8px;font-weight:700;font-family:monospace;opacity:.8}
+.heatmap-cell-score{font-size:11px;font-weight:900;font-family:monospace}
+.heatmap-cell-count{font-size:8px;opacity:.7}
+.heatmap-sect-label{font-size:9px;color:#64748b;text-align:center;padding:2px}
+.heatmap-pays-label{font-size:9px;color:#64748b;writing-mode:horizontal-tb;text-align:right;padding-right:4px;white-space:nowrap}
+
+/* Favicon badge */
+/* (handled via JS canvas) */
+
+/* Light mode */
+body.light .compact-toggle{background:#f1f5f9;border-color:#e2e8f0;color:#64748b}
+body.light .compact-toggle.on{border-color:#00d4aa;color:#059669}
+body.light .sect-score-track{background:#e2e8f0}
+body.light .sect-score-val{color:#1e293b}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -386,6 +422,7 @@ body.light .pays-chip.on{background:#e0fdf4;border-color:#00d4aa;color:#059669}
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="openPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#128184; Portfolio</button>
 <button class="hbtn" onclick="exportWatchlist()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33">&#11088; Export WL</button>
+<button class="compact-toggle" id="compact-btn" onclick="toggleCompact()" title="Vue condensée">&#9638; Compact</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
 <button class="hbtn" onclick="resetFilters()" style="background:#1e2d45;color:#64748b;border:1px solid #64748b44" title="Reinitialiser tous les filtres">&#10006; Filtres</button>
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
@@ -2579,6 +2616,210 @@ renderCard = function(r){
     'data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button>',
     'data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#64748b;padding:0 2px">&#127919;</button><button onclick="openHistorique(this.dataset.tk)" data-tk="'+r.ticker+'" style="font-size:13px;background:none;border:none;cursor:pointer;color:#3b82f6;padding:0 2px">&#128200;</button>'
   );
+};
+
+// ══ VUE CONDENSÉE ══
+var COMPACT_MODE = false;
+function toggleCompact(){
+  COMPACT_MODE = !COMPACT_MODE;
+  var btn = document.getElementById('compact-btn');
+  if(btn) btn.classList.toggle('on', COMPACT_MODE);
+  // Update existing cards
+  document.querySelectorAll('.card').forEach(function(c){
+    c.classList.toggle('compact', COMPACT_MODE);
+  });
+  render();
+  try{localStorage.setItem('screener_compact', COMPACT_MODE?'1':'0');}catch(e){}
+}
+try{if(localStorage.getItem('screener_compact')==='1'){COMPACT_MODE=true;setTimeout(function(){var b=document.getElementById('compact-btn');if(b)b.classList.add('on');},200);}}catch(e){}
+
+// Patch renderCard for compact mode
+var _origRC_compact = renderCard;
+renderCard = function(r){
+  var html = _origRC_compact(r);
+  if(COMPACT_MODE) html = html.replace('<div class="card">', '<div class="card compact">');
+  return html;
+};
+
+// ══ FAVICON DYNAMIQUE ══
+function updateFavicon(){
+  try{
+    var data = doFilter ? doFilter() : [];
+    var n70 = data.filter(function(r){ return (r.score||0)>=70; }).length;
+    var title = n70 > 0 ? '('+n70+') Stock Screener' : 'Stock Screener';
+    document.title = title;
+    // Draw favicon with badge
+    var canvas = document.createElement('canvas');
+    canvas.width = 32; canvas.height = 32;
+    var ctx = canvas.getContext('2d');
+    // Background
+    ctx.fillStyle = '#0a0e1a';
+    ctx.beginPath();
+    ctx.roundRect(0,0,32,32,6);
+    ctx.fill();
+    // Antenna emoji approximation
+    ctx.fillStyle = '#00d4aa';
+    ctx.font = 'bold 18px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('📡', 16, 22);
+    // Badge
+    if(n70 > 0){
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(26, 6, 8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(n70 > 9 ? '9+' : n70, 26, 10);
+    }
+    var link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    link.href = canvas.toDataURL();
+    document.head.appendChild(link);
+  }catch(e){}
+}
+setTimeout(updateFavicon, 500);
+
+// ══ SCORES SECTORIELS (dans Dashboard) ══
+function renderSecteurScores(){
+  var sectScores = {};
+  var sectCounts = {};
+  RAW_ORIG.forEach(function(r){
+    var s = r.secteur || 'Autre';
+    if(!sectScores[s]){ sectScores[s]=0; sectCounts[s]=0; }
+    sectScores[s] += (r.score||0);
+    sectCounts[s]++;
+  });
+  var sects = Object.keys(sectScores).sort(function(a,b){
+    return (sectScores[b]/sectCounts[b]) - (sectScores[a]/sectCounts[a]);
+  });
+  var maxAvg = sects.length ? sectScores[sects[0]]/sectCounts[sects[0]] : 1;
+  var html = '';
+  sects.slice(0,10).forEach(function(s){
+    var avg = sectScores[s]/sectCounts[s];
+    var pct = Math.round(avg/Math.max(maxAvg,1)*100);
+    var color = avg>=65?'#10b981':avg>=50?'#f59e0b':'#64748b';
+    html += '<div class="sect-score-bar">';
+    html += '<span class="sect-score-name" title="'+s+'">'+s+'</span>';
+    html += '<div class="sect-score-track"><div class="sect-score-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+    html += '<span class="sect-score-val" style="color:'+color+'">'+avg.toFixed(0)+'</span>';
+    html += '<span class="sect-score-count">'+sectCounts[s]+'</span>';
+    html += '</div>';
+  });
+  return html || '<div style="color:#64748b;font-size:11px">Pas de données</div>';
+}
+
+// ══ HEATMAP ══
+function renderHeatmap(){
+  // Get unique sectors and pays
+  var sectSet = {}, paysSet = {};
+  RAW_ORIG.forEach(function(r){
+    if(r.secteur) sectSet[r.secteur]=1;
+    if(r.pays) paysSet[r.pays]=1;
+  });
+  var sects = Object.keys(sectSet).sort();
+  var pays = Object.keys(paysSet).sort();
+  
+  // Limit to top sectors and pays by count
+  var sectCount = {}, paysCount = {};
+  RAW_ORIG.forEach(function(r){
+    sectCount[r.secteur]=(sectCount[r.secteur]||0)+1;
+    paysCount[r.pays]=(paysCount[r.pays]||0)+1;
+  });
+  sects = sects.sort(function(a,b){return (sectCount[b]||0)-(sectCount[a]||0);}).slice(0,8);
+  pays = pays.sort(function(a,b){return (paysCount[b]||0)-(paysCount[a]||0);}).slice(0,6);
+  
+  if(!sects.length || !pays.length) return '<div style="color:#64748b">Pas de données</div>';
+  
+  // Build matrix: avg score per (secteur, pays)
+  var matrix = {};
+  RAW_ORIG.forEach(function(r){
+    var key = r.secteur+'||'+r.pays;
+    if(!matrix[key]){ matrix[key]={sum:0,cnt:0}; }
+    matrix[key].sum += (r.score||0);
+    matrix[key].cnt++;
+  });
+  
+  // Render grid
+  var cols = pays.length + 1;
+  var html = '<div style="overflow-x:auto"><div class="heatmap-grid" style="grid-template-columns:130px repeat('+pays.length+',1fr)">';
+  
+  // Header row
+  html += '<div></div>';
+  pays.forEach(function(p){
+    html += '<div class="heatmap-sect-label">'+p+'</div>';
+  });
+  
+  // Data rows
+  sects.forEach(function(s){
+    html += '<div class="heatmap-pays-label" title="'+s+'">'+s.slice(0,16)+'</div>';
+    pays.forEach(function(p){
+      var key = s+'||'+p;
+      var cell = matrix[key];
+      var avg = cell ? cell.sum/cell.cnt : null;
+      var cnt = cell ? cell.cnt : 0;
+      if(avg===null){
+        html += '<div class="heatmap-cell" style="background:#0d1520;opacity:.3"></div>';
+      } else {
+        var r2 = avg>=70?18:avg>=60?40:avg>=50?60:avg>=40?100:140;
+        var g2 = avg>=70?185:avg>=60?160:avg>=50?140:avg>=40?80:40;
+        var b2 = avg>=70?129:avg>=60?80:avg>=50?40:avg>=40?40:40;
+        var bg = 'rgba('+r2+','+g2+','+b2+',0.7)';
+        var textC = avg>=50?'#fff':'#ccc';
+        html += '<div class="heatmap-cell" style="background:'+bg+'" onclick="filterHeatmap(\''+s+'\',\''+p+'\')" title="'+s+' / '+p+': '+avg.toFixed(0)+' ('+cnt+')">';
+        html += '<div class="heatmap-cell-score" style="color:'+textC+'">'+avg.toFixed(0)+'</div>';
+        html += '<div class="heatmap-cell-count" style="color:'+textC+'">'+cnt+'</div>';
+        html += '</div>';
+      }
+    });
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function filterHeatmap(sect, pays){
+  // Apply filters and switch to main view
+  var se = document.getElementById('sect');
+  if(se){
+    // Find matching option
+    var opts = Array.from(se.options);
+    var opt = opts.find(function(o){ return o.value===sect; });
+    if(opt) se.value = sect;
+  }
+  // Apply pays filter
+  PAYS_FILTER.clear();
+  PAYS_FILTER.add(pays);
+  buildPaysFilter();
+  setTab('all');
+  render();
+  // Scroll to top
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══ PATCH setTab pour inclure scores sectoriels et heatmap dans dashboard ══
+// Find the dash branch and augment it
+var _origSetTab_data = setTab;
+setTab = function(t){
+  _origSetTab_data(t);
+  if(t==='dash'){
+    // Add secteur scores and heatmap to view-container
+    var vc = document.getElementById('view-container');
+    if(vc && vc.innerHTML){
+      vc.innerHTML += '<div class="dash-card" style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Score moyen par secteur (top 300)</div>'
+        +renderSecteurScores()
+        +'</div>'
+        +'<div class="dash-card" style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Heatmap Secteur × Pays (score moyen)</div>'
+        +renderHeatmap()
+        +'</div>';
+    }
+    updateFavicon();
+  } else if(t!=='opp'){
+    updateFavicon();
+  }
 };
 
 render();
