@@ -466,6 +466,42 @@ body.light .live-price.down{border-color:#ef444466;color:#dc2626}
 body.light .dash-top3-row{border-color:#e2e8f0}
 body.light .dash-evol{border-color:#e2e8f0}
 
+
+/* Score de confiance */
+.conf-badge{font-size:8px;padding:2px 5px;border-radius:4px;font-family:monospace;font-weight:700;margin-left:3px;cursor:help}
+.conf-high{background:#10b98120;color:#10b981;border:1px solid #10b98140}
+.conf-med{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40}
+.conf-low{background:#ef444420;color:#ef4444;border:1px solid #ef444440}
+
+/* Notes WL */
+.wl-note-btn{font-size:10px;background:#1e2d45;border:1px solid #2a3f5f;cursor:pointer;color:#64748b;padding:1px 5px;border-radius:4px;transition:.15s;font-family:monospace}
+.wl-note-btn.has-note{color:#f59e0b;background:#f59e0b18;border-color:#f59e0b44}
+.wl-note-btn:hover{color:#00d4aa;border-color:#00d4aa44}
+.note-modal-ta{width:100%;min-height:80px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;border-radius:8px;padding:8px;font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box}
+.note-display{font-size:10px;color:#f59e0b;font-family:monospace;padding:4px 8px;background:#f59e0b10;border-radius:4px;margin-top:4px;border-left:2px solid #f59e0b}
+
+/* Alerte seuil */
+.alert-banner{background:#10b98115;border:1px solid #10b98140;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:80px;overflow-y:auto}
+.alert-banner-item{font-family:monospace;font-size:11px;color:#10b981}
+.alert-input{width:52px;background:#0d1520;border:1px solid #1e2d45;color:#e2e8f0;font-size:11px;padding:3px 5px;border-radius:4px;font-family:monospace;text-align:center}
+
+/* Light mode */
+body.light .note-modal-ta{background:#fff;border-color:#cbd5e1;color:#1e293b}
+body.light .note-display{color:#d97706;background:#fef3c720;border-color:#d97706}
+body.light .alert-banner{background:#f0fdf4;border-color:#86efac}
+body.light .alert-banner-item{color:#059669}
+body.light .alert-input{background:#fff;border-color:#cbd5e1;color:#1e293b;font-size:11px}
+body.light body.light .wl-note-btn{background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8}
+body.light .wl-note-btn.has-note{background:#fef3c7;border-color:#d97706;color:#d97706}
+
+
+body.light #wl-alerts-panel{background:#f8fafc!important;border-color:#e2e8f0!important}
+body.light #wl-alerts-panel div[style*="background:#111827"]{background:#fff!important;border-color:#e2e8f0!important}
+body.light #wl-alerts-panel span[style*="color:#64748b"]{color:#64748b!important}
+body.light #alert-banner{background:#f0fdf4!important;border-color:#86efac!important}
+body.light .alert-banner-item{color:#059669!important}
+body.light #wl-price-refresh{background:#f1f5f9!important;border-color:#00d4aa44!important}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -476,7 +512,7 @@ body.light .dash-evol{border-color:#e2e8f0}
 <button class="hbtn hbtn-guide" onclick="openGuide()">&#128218; Guide</button>
 <button class="hbtn" onclick="openCols()" style="background:#1e2d45;color:#00d4aa;border:1px solid #00d4aa44">&#9638; Colonnes</button>
 <button class="hbtn" onclick="exportCSV()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98144">&#8659; CSV</button>
-<button class="pdf-btn" onclick="exportPDF()">&#128196; PDF Top 20</button>
+<button class="pdf-btn" onclick="exportPDFv2()">&#128196; PDF Top 20</button>
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="openPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#128184; Portfolio</button>
 <button class="hbtn" onclick="exportWatchlist()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33">&#11088; Export WL</button>
@@ -3197,6 +3233,7 @@ function fetchWLPrices(){
     if(idx >= tickers.length){
       WL_PRICE_LOADING = false;
       if(btn){ btn.innerHTML = '&#128260; Prix live'; btn.disabled = false; }
+      render(); // refresh table with live prices
       var msg = (tickers.length - errors) + '/' + tickers.length + ' prix mis à jour';
       if(errors) msg += ' (' + errors + ' erreur(s))';
       // Show brief toast
@@ -3268,6 +3305,281 @@ setTab = function(t){
     }, 150);
   }
 };
+
+// ══ SCORE DE CONFIANCE ══
+function getConfidence(r){
+  // Checks key fundamental fields — missing = less confidence
+  var fields = ['per','pbv','roe','marge','div','bpa','ev','peg','ps','pfcf','graham','cr','de','fcfy',
+                'rsi','macd','cci','stoch','adx','mm20','mm50','mm200','willr','roc'];
+  var present = fields.filter(function(f){ return r[f]!==null && r[f]!==undefined && r[f]!==''; }).length;
+  var pct = Math.round(present / fields.length * 100);
+  return pct;
+}
+function confBadge(r){
+  var pct = getConfidence(r);
+  var cls = pct>=80?'conf-high':pct>=50?'conf-med':'conf-low';
+  var label = pct>=80?'●●●':pct>=50?'●●○':'●○○';
+  return '<span class="conf-badge '+cls+'" title="Données: '+pct+'% complètes ('+Math.round(pct/100*24)+'/24 champs)">'+label+'</span>';
+}
+
+// ══ NOTES WATCHLIST ══
+var WL_NOTES_KEY = 'screener_wl_notes_v1';
+var WL_NOTES = {};
+try{ var _n=localStorage.getItem(WL_NOTES_KEY); if(_n) WL_NOTES=JSON.parse(_n); }catch(e){}
+
+function saveNotes(){ try{ localStorage.setItem(WL_NOTES_KEY, JSON.stringify(WL_NOTES)); }catch(e){} }
+
+var _noteCurrentTk = '';
+function openNote(tk){
+  _noteCurrentTk = tk;
+  document.getElementById('note-ticker-label').textContent = tk;
+  document.getElementById('note-textarea').value = WL_NOTES[tk] || '';
+  document.getElementById('modal-note').className = 'modal-bg open';
+}
+function closeNote(){ document.getElementById('modal-note').className = 'modal-bg'; }
+function saveNote(){
+  var txt = document.getElementById('note-textarea').value.trim();
+  if(txt) WL_NOTES[_noteCurrentTk] = txt;
+  else delete WL_NOTES[_noteCurrentTk];
+  saveNotes();
+  closeNote();
+  render(); // refresh to update note buttons
+}
+
+// ══ ALERTES SEUIL SCORE ══
+var WL_ALERTS_KEY = 'screener_wl_alerts_v1';
+var WL_ALERTS = {};
+try{ var _a=localStorage.getItem(WL_ALERTS_KEY); if(_a) WL_ALERTS=JSON.parse(_a); }catch(e){}
+function saveAlerts(){ try{ localStorage.setItem(WL_ALERTS_KEY, JSON.stringify(WL_ALERTS)); }catch(e){} }
+
+function setAlert(tk, val){
+  var v = parseInt(val);
+  if(v > 0 && v <= 100) WL_ALERTS[tk] = v;
+  else delete WL_ALERTS[tk];
+  saveAlerts();
+  renderAlertBanner();
+  renderAlertsPanel();
+}
+
+function renderAlertsPanel(){
+  var panel = document.getElementById('wl-alerts-panel');
+  if(!panel) return;
+  var tickers = Object.keys(WATCHLIST);
+  if(!tickers.length){ panel.innerHTML='<div style="font-size:10px;color:#64748b">Watchlist vide</div>'; return; }
+  var html = '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">&#127919; Alertes score — Score cible par action</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto">';
+  tickers.forEach(function(tk){
+    var r = RAW_ORIG.filter(function(x){ return x.ticker===tk; })[0];
+    var sc = r ? getScore(r) : '?';
+    var target = WL_ALERTS[tk] || '';
+    var reached = target && sc >= target;
+    var c = reached ? '#10b981' : '#64748b';
+    html += '<div style="display:flex;align-items:center;gap:4px;background:#111827;border:1px solid '+(reached?'#10b98144':'#1e2d45')+';border-radius:6px;padding:4px 8px">'
+      +'<span style="font-family:monospace;font-size:11px;font-weight:700;color:'+c+'">'+tk+'</span>'
+      +'<span style="font-size:9px;color:#64748b">'+sc+'</span>'
+      +'<span style="font-size:9px;color:#475569">→</span>'
+      +'<input class="alert-input" type="number" min="1" max="100" value="'+target+'" placeholder="cible" '
+      +"onchange=\"setAlert('"+tk+"',this.value)\" title=\"Score cible pour "+tk+"\" "
+      +'style="width:52px">'
+      +(reached?'<span style="font-size:10px">&#10003;</span>':'')
+      +'</div>';
+  });
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function renderAlertBanner(){
+  var triggered = [];
+  Object.keys(WL_ALERTS).forEach(function(tk){
+    var r = RAW_ORIG.filter(function(x){ return x.ticker===tk; })[0];
+    if(!r) return;
+    var sc = getScore(r);
+    var target = WL_ALERTS[tk];
+    if(sc >= target) triggered.push({tk:tk, sc:sc, target:target, nom:r.nom||''});
+  });
+  var banner = document.getElementById('alert-banner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'alert-banner';
+    banner.className = 'alert-banner';
+    banner.style.display = 'none';
+    var statsEl = document.getElementById('stats');
+    if(statsEl) statsEl.parentNode.insertBefore(banner, statsEl);
+  }
+  if(triggered.length){
+    banner.style.display = 'flex';
+    banner.innerHTML = '<span style="font-size:12px">&#127919;</span>'
+      + triggered.map(function(t){
+          return '<span class="alert-banner-item">'+t.tk+' atteint '+t.sc+' (cible '+t.target+')</span>';
+        }).join('<span style="color:#1e2d45">|</span>');
+  } else {
+    banner.style.display = 'none';
+  }
+}
+setTimeout(renderAlertBanner, 500);
+
+// ══ PATCH cH: confiance + note dans colonne ticker ══
+var _origCH_conf = cH;
+cH = function(col, r){
+  if(col === 'ticker'){
+    var base = _origCH_conf(col, r);
+    // Insert confidence badge + note after ticker line
+    var conf = confBadge(r);
+    var noteBtn = WATCHLIST[r.ticker]
+      ? '<button class="wl-note-btn'+(WL_NOTES[r.ticker]?' has-note':'')+'" onclick="openNote(\''+r.ticker+'\')" title="'+(WL_NOTES[r.ticker]?'Note: '+WL_NOTES[r.ticker].slice(0,30)+'...':'Ajouter une note')+'">&#128221;</button>'
+      : '';
+    // Insert after </span> (ticker span)
+    base = base.replace('</span>\n      +tg', ''); // avoid double patching
+    return base.replace(/(<div class="nm">)/, conf + noteBtn + '$1');
+  }
+  return _origCH_conf(col, r);
+};
+
+// ══ PATCH renderCard: confiance + note ══
+var _origRC_conf = renderCard;
+renderCard = function(r){
+  var html = _origRC_conf(r);
+  // Add confidence badge after card-nom
+  var conf = confBadge(r);
+  var noteHtml = (WATCHLIST[r.ticker] && WL_NOTES[r.ticker])
+    ? '<div class="note-display">&#128221; '+WL_NOTES[r.ticker].slice(0,60)+(WL_NOTES[r.ticker].length>60?'...':'')+'</div>'
+    : '';
+  var noteBtnCard = WATCHLIST[r.ticker]
+    ? '<button class="wl-note-btn'+(WL_NOTES[r.ticker]?' has-note':'')+'" onclick="openNote(\''+r.ticker+'\')" title="Note" style="font-size:13px">&#128221;</button>'
+    : '';
+  html = html.replace('<div class="card-nom">', conf + noteBtnCard + '<div class="card-nom">');
+  if(noteHtml) html = html.replace('</div>\n<div class="card-kv', noteHtml + '</div>\n<div class="card-kv');
+  return html;
+};
+
+// ══ PATCH setTab: show alert banner + alert input in WL tab ══
+var _origSetTab_alerts = setTab;
+setTab = function(t){
+  _origSetTab_alerts(t);
+  renderAlertBanner();
+  if(t === 'wl'){
+    setTimeout(function(){
+      // Add alerts panel after stats if not present
+      if(!document.getElementById('wl-alerts-panel')){
+        var statsEl2 = document.getElementById('stats');
+        if(statsEl2){
+          var panel2 = document.createElement('div');
+          panel2.id = 'wl-alerts-panel';
+          panel2.style.cssText = 'background:#0d1520;border:1px solid #1e2d45;border-radius:8px;padding:10px 12px;margin-bottom:8px;overflow:hidden';
+          statsEl2.parentNode.insertBefore(panel2, statsEl2.nextSibling);
+        }
+      }
+      renderAlertsPanel();
+    }, 200);
+  }
+};
+
+// ══ EXPORT PDF AMÉLIORÉ ══
+function exportPDFv2(){
+  var top = renderTopOpportunites();
+  var date = SCAN_DATE;
+
+  // Stats globales
+  var total = RAW_ORIG.length;
+  var s70 = RAW_ORIG.filter(function(r){ return getScore(r)>=70; }).length;
+  var s50 = RAW_ORIG.filter(function(r){ return getScore(r)>=50 && getScore(r)<70; }).length;
+  var divVals = RAW_ORIG.filter(function(r){ return r.div&&r.div>0&&r.div<=20; }).map(function(r){return r.div;});
+  divVals.sort(function(a,b){return a-b;});
+  var divMed = divVals.length ? (divVals.length%2 ? divVals[Math.floor(divVals.length/2)] : ((divVals[Math.floor(divVals.length/2)-1]+divVals[Math.floor(divVals.length/2)])/2)).toFixed(1)+'%' : 'N/A';
+
+  // Scores sectoriels
+  var sectMap = {};
+  RAW_ORIG.forEach(function(r){
+    var s=r.secteur||'Autre';
+    if(!sectMap[s]){sectMap[s]={sum:0,cnt:0};}
+    sectMap[s].sum+=(r.score||0); sectMap[s].cnt++;
+  });
+  var sectRows = Object.keys(sectMap).sort(function(a,b){
+    return (sectMap[b].sum/sectMap[b].cnt)-(sectMap[a].sum/sectMap[a].cnt);
+  }).slice(0,8).map(function(s){
+    var avg=(sectMap[s].sum/sectMap[s].cnt).toFixed(0);
+    var c=avg>=65?'#10b981':avg>=50?'#f59e0b':'#999';
+    return '<tr><td style="padding:4px 8px;font-size:11px">'+s+'</td>'
+      +'<td style="padding:4px 8px;font-family:monospace;font-weight:700;color:'+c+'">'+avg+'</td>'
+      +'<td style="padding:4px 8px;font-size:10px;color:#999">'+sectMap[s].cnt+'</td></tr>';
+  }).join('');
+
+  // Sparkline SVG inline
+  function spark(data){
+    if(!data||data.length<2) return '';
+    var w=80,h=24,n=data.length;
+    var xs=w/(n-1);
+    var pts=data.map(function(v,i){return [Math.round(i*xs),Math.round(h-(v/100*h))];});
+    var path=pts.map(function(p,i){return (i===0?'M':'L')+p[0]+' '+p[1];}).join(' ');
+    var color=data[data.length-1]>data[0]+5?'#10b981':data[data.length-1]<data[0]-5?'#ef4444':'#999';
+    return '<svg width="80" height="24" viewBox="0 0 80 24"><path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="1.5"/></svg>';
+  }
+
+  // Top 20 rows with sparkline
+  var rows = '';
+  for(var i=0;i<top.length;i++){
+    var r=top[i];
+    var sc=getScore(r);
+    var c=sc>=70?'#10b981':sc>=50?'#f59e0b':'#999';
+    var conf=getConfidence(r);
+    var confC=conf>=80?'#10b981':conf>=50?'#f59e0b':'#ef4444';
+    rows+='<tr style="border-bottom:1px solid #f0f0f0">'
+      +'<td style="padding:5px 4px;font-weight:700;color:#999">'+(i+1)+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace;color:#0284c7;font-weight:700">'+r.ticker+'</td>'
+      +'<td style="padding:5px 4px;font-size:11px">'+r.nom+'</td>'
+      +'<td style="padding:5px 4px;text-align:center">'+spark(r.sparkline)+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace;font-weight:900;color:'+c+'">'+sc+'</td>'
+      +'<td style="padding:5px 4px;font-size:10px">'+r.secteur+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace">'+(r.per||'-')+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace">'+(r.roe||'-')+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace">'+(r.div?r.div+'%':'-')+'</td>'
+      +'<td style="padding:5px 4px;font-family:monospace;color:'+(r.rsi&&r.rsi<=45?'#f59e0b':'#333')+'">'+(r.rsi||'-')+'</td>'
+      +'<td style="padding:5px 4px;font-size:9px;color:'+confC+'">'+conf+'%</td>'
+      +'</tr>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Stock Screener — Top 20 — '+date+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;margin:24px;color:#1e293b;font-size:12px}'
+    +'h1{color:#0f172a;font-size:18px;border-bottom:2px solid #00d4aa;padding-bottom:6px}'
+    +'h2{color:#0f172a;font-size:14px;margin-top:20px;margin-bottom:8px}'
+    +'.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}'
+    +'.stat-box{background:#f8fafc;border-radius:8px;padding:10px 14px;border:1px solid #e2e8f0}'
+    +'.stat-lbl{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}'
+    +'.stat-val{font-size:20px;font-weight:900;font-family:monospace;color:#0284c7}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px}'
+    +'th{padding:6px 4px;background:#f1f5f9;font-weight:700;text-align:left;font-size:10px;color:#475569}'
+    +'tr:hover td{background:#f8fafc}'
+    +'@media print{body{margin:12px}.no-print{display:none}}'
+    +'</style></head><body>'
+    +'<h1>&#128225; Stock Screener — Top 20 — '+date+'</h1>'
+    +'<div class="stat-grid">'
+    +'<div class="stat-box"><div class="stat-lbl">Total scanné</div><div class="stat-val">'+total+'</div></div>'
+    +'<div class="stat-box"><div class="stat-lbl">Score 70+</div><div class="stat-val" style="color:#10b981">'+s70+'</div></div>'
+    +'<div class="stat-box"><div class="stat-lbl">Score 50-69</div><div class="stat-val" style="color:#f59e0b">'+s50+'</div></div>'
+    +'<div class="stat-box"><div class="stat-lbl">Div. médiane</div><div class="stat-val" style="color:#8b5cf6">'+divMed+'</div></div>'
+    +'</div>'
+    +'<h2>&#127919; Top 20 opportunités</h2>'
+    +'<table><thead><tr><th>#</th><th>Ticker</th><th>Nom</th><th>60j</th><th>Score</th>'
+    +'<th>Secteur</th><th>PER</th><th>ROE%</th><th>Div%</th><th>RSI</th><th>Conf.</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<h2>&#128200; Scores sectoriels</h2>'
+    +'<table style="max-width:400px"><thead><tr><th>Secteur</th><th>Score moy.</th><th>N</th></tr></thead>'
+    +'<tbody>'+sectRows+'</tbody></table>'
+    +'<div class="no-print" style="margin-top:20px;padding:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;display:flex;align-items:center;gap:12px">'
+    +'<span style="font-size:13px">&#128161;</span>'
+    +'<span style="font-size:11px;color:#166534">Pour exporter en PDF : cliquez le bouton ci-contre ou faites <strong>Ctrl+P</strong> (Cmd+P sur Mac) puis choisissez "Enregistrer en PDF".</span>'
+    +'<button onclick="window.print()" style="margin-left:auto;padding:6px 16px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;white-space:nowrap">&#128438; Imprimer / PDF</button>'
+    +'</div>'
+    +'<p style="margin-top:12px;font-size:9px;color:#94a3b8">Données Yahoo Finance à titre indicatif. Ne constitue pas un conseil en investissement. Généré le '+date+'.<\/p>'
+    +'<\/body><\/html>';
+
+  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'screener_top20_' + new Date().toISOString().slice(0,10) + '.html';
+  a.click();
+}
 
 render();
 resetFilters();
@@ -3343,4 +3655,17 @@ resetFilters();
 <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-hist').className='modal-bg'" style="margin-top:12px">Fermer</button>
 </div></div>
 <button id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">&#8679;</button>
+
+<!-- Modal Notes WL -->
+<div class="modal-bg" id="modal-note">
+<div class="modal" style="max-width:400px">
+<button class="modal-close" onclick="closeNote()">&#10005;</button>
+<h3>&#128221; Note — <span id="note-ticker-label"></span></h3>
+<textarea class="note-modal-ta" id="note-textarea" placeholder="Ajouter une note personnelle..."></textarea>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button class="modal-btn modal-btn-ok" onclick="saveNote()">&#10003; Sauvegarder</button>
+<button class="modal-btn modal-btn-cancel" onclick="closeNote()">Annuler</button>
+</div>
+</div></div>
+
 </body></html>
