@@ -614,12 +614,12 @@ body.light .sc-row{border-color:#e2e8f010}
 <button class="hbtn" id="cmp-open-btn" onclick="openComparator()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b44;display:none">&#9878; Comparer (<span id="cmp-count">0</span>)</button>
 <button class="hbtn hbtn-cfg" onclick="openCfg()">&#9881; Criteres</button>
 <button class="hbtn hbtn-imp" onclick="openImp()">&#128229; Tickers</button>
-<button class="hbtn hbtn-scan" onclick="triggerScan()">&#9889; Nouveau scan</button>
+
 </div></div>
 <div class="modal-bg" id="modal-cfg"><div class="modal" style="max-width:620px">
 <button class="modal-close" onclick="closeCfg()">&#10005;</button>
 <h3>&#9881; Criteres de scoring</h3>
-<div class="cfg-note">Modifications instantanees. Nouveau scan pour recharger Yahoo Finance.</div>
+<div class="cfg-note">Modifications instantanees. Le scan quotidien recharge les données Yahoo Finance.</div>
 <div class="cfg-section">Poids du score (total = 100)</div><div class="cfg-grid">
 <div class="cfg-item"><label>Poids Value (%)</label><input type="number" id="c-pv" step="5"></div>
 <div class="cfg-item"><label>Poids Growth (%)</label><input type="number" id="c-pg" step="5"></div>
@@ -4246,31 +4246,9 @@ setTab = function(t){
   }
 };
 
-// ══ BOUTON SCAN PARTIEL dans header ══
+// ══ BOUTON SCAN WL (export watchlist_cache.json) ══
 setTimeout(function(){
-  var scanBtn = document.querySelector('button[onclick*="scanNow"]') ||
-    Array.from(document.querySelectorAll('button')).find(function(b){ return b.textContent.includes('Nouveau scan'); });
-  if(!scanBtn) return;
-  var wlBtn = document.createElement('button');
-  wlBtn.className = 'hbtn';
-  wlBtn.style.cssText = 'background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33';
-  wlBtn.innerHTML = '⚡ Scan WL';
-  wlBtn.title = 'Scan rapide sur la watchlist uniquement';
-  wlBtn.onclick = function(){
-    var tks = Object.keys(WATCHLIST);
-    if(!tks.length){ alert('Watchlist vide.'); return; }
-    // Save WL to cache file (user needs to download + push)
-    var json = JSON.stringify(tks);
-    var blob = new Blob([json], {type:'application/json'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'watchlist_cache.json';
-    a.click();
-    setTimeout(function(){
-      alert('Fichier watchlist_cache.json téléchargé.\n\nPour lancer le scan partiel :\n1. Placez ce fichier à la racine du repo\n2. Lancez : python generate.py --watchlist\n\nOu via GitHub Actions avec le paramètre --watchlist.');
-    }, 300);
-  };
-  scanBtn.parentNode.insertBefore(wlBtn, scanBtn);
+  // Already added as static button in HTML header (Scan WL)
 }, 400);
 
 render();
