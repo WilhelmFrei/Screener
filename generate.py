@@ -39,6 +39,12 @@ ROE_MIN          = 8
 # ══════════════════════════════════════════════════════════════
 tickers_data = []
 PEA_SET = set()
+import argparse
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument('--watchlist', action='store_true', help='Scan only WL tickers')
+_args, _ = _parser.parse_known_args()
+SCAN_WATCHLIST_ONLY = _args.watchlist
+
 csv_path = Path('tickers.csv')
 
 if not csv_path.exists():
@@ -483,12 +489,6 @@ print('HTML OK: ' + str(out))
 # ══ HISTORIQUE DES SCORES ══
 import datetime as _dt
 
-# ══ SCAN PARTIEL WATCHLIST ══
-import argparse
-_parser = argparse.ArgumentParser(add_help=False)
-_parser.add_argument('--watchlist', action='store_true', help='Scan only WL tickers')
-_args, _ = _parser.parse_known_args()
-SCAN_WATCHLIST_ONLY = _args.watchlist
 hist_dir = Path('docs/history')
 hist_dir.mkdir(exist_ok=True)
 today_str = _dt.date.today().isoformat()
