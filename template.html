@@ -607,6 +607,7 @@ body.light .sc-row{border-color:#e2e8f010}
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="openPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#128184; Portfolio</button>
 <button class="hbtn" onclick="exportWatchlist()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33">&#11088; Export WL</button>
+<button class="hbtn" onclick="scanWL()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33" title="Exporte watchlist_cache.json pour scan partiel">&#9889; Scan WL</button>
 <button class="compact-toggle" onclick="openGlobalSearch()" title="Recherche globale (/)">&#128269; Recherche</button>
 <button class="compact-toggle" id="compact-btn" onclick="toggleCompact()" title="Vue condensée">&#9638; Compact</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
@@ -4246,10 +4247,19 @@ setTab = function(t){
   }
 };
 
-// ══ BOUTON SCAN WL (export watchlist_cache.json) ══
-setTimeout(function(){
-  // Already added as static button in HTML header (Scan WL)
-}, 400);
+// ══ BOUTON SCAN WL ══
+function scanWL(){
+  var tks = Object.keys(WATCHLIST);
+  if(!tks.length){ alert('Watchlist vide.'); return; }
+  var blob = new Blob([JSON.stringify(tks)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'watchlist_cache.json';
+  a.click();
+  setTimeout(function(){
+    alert('watchlist_cache.json téléchargé.\n\nPour scan partiel :\n  python generate.py --watchlist\n\nPlacez le fichier à la racine du repo avant.');
+  }, 300);
+}
 
 render();
 resetFilters();
