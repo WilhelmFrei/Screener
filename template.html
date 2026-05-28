@@ -539,6 +539,60 @@ body.light .gs-result:hover{background:#f1f5f9}
 body.light .gs-result-nom{color:#64748b}
 body.light #global-search-results{background:#fff}
 
+
+/* Onboarding */
+#onboarding-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:20000;display:flex;align-items:center;justify-content:center}
+#onboarding-box{background:#0a0e1a;border:1px solid #1e2d45;border-radius:16px;width:90%;max-width:480px;padding:28px;position:relative}
+.ob-step{display:none}.ob-step.active{display:block}
+.ob-title{font-size:18px;font-weight:900;color:#00d4aa;margin-bottom:8px}
+.ob-body{font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:20px}
+.ob-highlight{color:#e2e8f0;font-weight:700}
+.ob-progress{display:flex;gap:6px;margin-bottom:20px}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:#1e2d45;transition:.2s}
+.ob-dot.active{background:#00d4aa}
+.ob-nav{display:flex;justify-content:space-between;align-items:center}
+.ob-btn{font-size:11px;padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-family:monospace;font-weight:700}
+.ob-btn-next{background:#00d4aa;color:#000}
+.ob-btn-skip{background:none;border:1px solid #1e2d45;color:#64748b}
+body.light #onboarding-box{background:#fff;border-color:#e2e8f0}
+body.light .ob-body{color:#64748b}
+body.light .ob-dot{background:#e2e8f0}
+body.light .ob-btn-skip{border-color:#e2e8f0;color:#94a3b8}
+
+/* Raccourcis clavier */
+#shortcuts-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;display:none;align-items:center;justify-content:center}
+#shortcuts-overlay.open{display:flex}
+#shortcuts-box{background:#0a0e1a;border:1px solid #1e2d45;border-radius:12px;width:90%;max-width:500px;padding:20px;max-height:80vh;overflow-y:auto}
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:12px}
+.sc-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #1e2d4520}
+.sc-key{font-family:monospace;font-size:11px;font-weight:700;background:#1e2d45;padding:2px 7px;border-radius:4px;color:#e2e8f0;min-width:24px;text-align:center;border:1px solid #2a3f5f}
+.sc-label{font-size:11px;color:#94a3b8}
+body.light #shortcuts-box{background:#fff;border-color:#e2e8f0}
+body.light .sc-key{background:#f1f5f9;border-color:#e2e8f0;color:#1e293b}
+body.light .sc-label{color:#64748b}
+body.light .sc-row{border-color:#e2e8f010}
+
+/* Top movers */
+.mover-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e2d4520}
+.mover-row:last-child{border:none}
+.mover-tk{font-family:monospace;font-size:11px;font-weight:700;color:#00d4aa;min-width:70px}
+.mover-delta{font-family:monospace;font-size:12px;font-weight:900;min-width:45px;text-align:right}
+
+/* Filtre nouveaux entrants amélioration */
+.new-week-badge{font-size:8px;padding:1px 5px;border-radius:3px;background:#8b5cf620;color:#8b5cf6;border:1px solid #8b5cf640;font-family:monospace;margin-left:3px}
+
+/* Carte monde - heatmap simplifiée par pays */
+.country-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.country-cell{border-radius:6px;padding:5px 8px;min-width:55px;cursor:pointer;transition:.2s;text-align:center}
+.country-cell:hover{transform:scale(1.05);opacity:.9}
+.country-cell-code{font-family:monospace;font-size:11px;font-weight:900}
+.country-cell-score{font-size:9px;margin-top:1px}
+.country-cell-count{font-size:8px;opacity:.7}
+
+/* Tendance 7j */
+.trend-arrow{font-size:20px}
+.trend-val{font-family:monospace;font-size:18px;font-weight:900}
+
 </style></head><body>
 <div class="hdr">
 <div><div class="htitle">&#128225; Stock Screener</div>
@@ -3980,6 +4034,245 @@ renderCard = function(r){
   return html;
 };
 
+// ══ ONBOARDING ══
+var OB_KEY = 'screener_onboarding_v1';
+var _obStep = 0;
+var OB_STEPS = 5;
+
+function initOnboarding(){
+  try{ if(localStorage.getItem(OB_KEY)) return; }catch(e){}
+  // Build progress dots
+  var dots = '';
+  for(var i=0;i<OB_STEPS;i++) dots += '<div class="ob-dot'+(i===0?' active':'')+'" id="ob-dot-'+i+'"></div>';
+  document.getElementById('ob-progress').innerHTML = dots;
+  document.getElementById('onboarding-overlay').style.display = 'flex';
+}
+function obNext(){
+  _obStep++;
+  if(_obStep >= OB_STEPS){ skipOnboarding(); return; }
+  document.querySelectorAll('.ob-step').forEach(function(s,i){ s.classList.toggle('active', i===_obStep); });
+  document.querySelectorAll('.ob-dot').forEach(function(d,i){ d.classList.toggle('active', i<=_obStep); });
+  var btn = document.getElementById('ob-next-btn');
+  if(btn) btn.textContent = _obStep === OB_STEPS-1 ? 'Commencer !' : 'Suivant →';
+}
+function skipOnboarding(){
+  document.getElementById('onboarding-overlay').style.display = 'none';
+  try{ localStorage.setItem(OB_KEY, '1'); }catch(e){}
+}
+function resetOnboarding(){
+  try{ localStorage.removeItem(OB_KEY); }catch(e){}
+  _obStep = 0;
+  document.querySelectorAll('.ob-step').forEach(function(s,i){ s.classList.toggle('active', i===0); });
+  document.querySelectorAll('.ob-dot').forEach(function(d,i){ d.classList.toggle('active', i===0); });
+  var btn = document.getElementById('ob-next-btn');
+  if(btn) btn.textContent = 'Suivant →';
+  document.getElementById('onboarding-overlay').style.display = 'flex';
+}
+setTimeout(initOnboarding, 600);
+
+// ══ RACCOURCIS CLAVIER ══
+function openShortcuts(){
+  document.getElementById('shortcuts-overlay').classList.add('open');
+}
+function closeShortcuts(){
+  document.getElementById('shortcuts-overlay').classList.remove('open');
+}
+// Add ? shortcut
+var _origKD = document.onkeydown;
+document.addEventListener('keydown', function(e){
+  if(e.key === '?' && !e.target.matches('input,textarea,select') && !document.querySelector('.modal-bg.open')){
+    openShortcuts();
+  }
+});
+// Add ? button to header
+setTimeout(function(){
+  var hdr = document.querySelector('.hbtns') || document.querySelector('.header');
+  if(!hdr) return;
+  var btn = document.createElement('button');
+  btn.className = 'compact-toggle';
+  btn.title = 'Raccourcis clavier (?)';
+  btn.innerHTML = '⌨️ Raccourcis';
+  btn.onclick = openShortcuts;
+  hdr.appendChild(btn);
+}, 300);
+
+// ══ SCAN PARTIEL WATCHLIST ══
+function saveWatchlistCache(){
+  // Save WL tickers to localStorage for potential use
+  var tks = Object.keys(WATCHLIST);
+  try{ localStorage.setItem('screener_wl_cache', JSON.stringify(tks)); }catch(e){}
+}
+// Override saveWatchlist to also save cache
+var _origSaveWL = saveWatchlist;
+saveWatchlist = function(){
+  _origSaveWL();
+  saveWatchlistCache();
+};
+
+// ══ FILTRE NOUVEAUX ENTRANTS DE LA SEMAINE ══
+// Detect tickers that appeared in data in the last 7 days vs older history
+function getNewThisWeek(){
+  var sevenDaysAgo = Date.now() - 7*86400000;
+  return RAW_ORIG.filter(function(r){
+    // A ticker is "new this week" if it has score_history of length <= 7
+    // meaning it appeared recently in scans
+    var hist = r.score_history || [];
+    return hist.length > 0 && hist.length <= 7;
+  });
+}
+
+function renderNewWeekBadge(r){
+  var hist = r.score_history || [];
+  if(hist.length > 0 && hist.length <= 7){
+    return '<span class="new-week-badge" title="Apparu il y a '+hist.length+' scan(s)">NEW '+hist.length+'j</span>';
+  }
+  return '';
+}
+
+// ══ TENDANCE 7J MARCHÉ ══
+function getMarketTrend7j(){
+  var scores_now = [], scores_7j = [];
+  RAW_ORIG.forEach(function(r){
+    var hist = r.score_history || [];
+    if(hist.length >= 2){
+      scores_now.push(hist[hist.length-1]);
+      scores_7j.push(hist[Math.max(0, hist.length-8)]);
+    }
+  });
+  if(!scores_now.length) return null;
+  var avg_now = scores_now.reduce(function(a,b){return a+b;},0)/scores_now.length;
+  var avg_7j  = scores_7j.reduce(function(a,b){return a+b;},0)/scores_7j.length;
+  return {now: avg_now, prev: avg_7j, delta: avg_now - avg_7j, n: scores_now.length};
+}
+
+// ══ TOP MOVERS ══
+function getTopMovers(){
+  var movers = [];
+  RAW_ORIG.forEach(function(r){
+    var hist = r.score_history || [];
+    if(hist.length >= 2){
+      var delta = hist[hist.length-1] - hist[hist.length-2];
+      movers.push({r:r, delta:delta});
+    }
+  });
+  movers.sort(function(a,b){return Math.abs(b.delta)-Math.abs(a.delta);});
+  return movers.slice(0,10);
+}
+
+// ══ CARTE MONDE (heatmap pays) ══
+function renderCountryMap(){
+  var paysData = {};
+  RAW_ORIG.forEach(function(r){
+    if(!r.pays) return;
+    if(!paysData[r.pays]) paysData[r.pays] = {sum:0, cnt:0};
+    paysData[r.pays].sum += (r.score||0);
+    paysData[r.pays].cnt++;
+  });
+  var pays = Object.keys(paysData).sort(function(a,b){
+    return (paysData[b].sum/paysData[b].cnt) - (paysData[a].sum/paysData[a].cnt);
+  });
+  if(!pays.length) return '<div style="color:#64748b">Pas de données</div>';
+
+  return '<div class="country-grid">' + pays.map(function(p){
+    var avg = paysData[p].sum/paysData[p].cnt;
+    var cnt = paysData[p].cnt;
+    var r2 = avg>=70?18:avg>=60?40:avg>=50?60:100;
+    var g2 = avg>=70?185:avg>=60?160:avg>=50?140:80;
+    var b2 = avg>=70?129:avg>=60?80:avg>=50?40:40;
+    var bg = 'rgba('+r2+','+g2+','+b2+',0.75)';
+    return '<div class="country-cell" style="background:'+bg+'" onclick="filterHeatmap(null,\''+p+'\')" title="'+p+': score moy. '+avg.toFixed(0)+' ('+cnt+' actions)">'
+      +'<div class="country-cell-code" style="color:#fff">'+p+'</div>'
+      +'<div class="country-cell-score" style="color:rgba(255,255,255,.8)">'+avg.toFixed(0)+'</div>'
+      +'<div class="country-cell-count" style="color:rgba(255,255,255,.6)">'+cnt+'</div>'
+      +'</div>';
+  }).join('') + '</div>';
+}
+
+// ══ PATCH _origSetTab_data : ajouter tendance 7j + top movers + carte monde ══
+var _origSetTab_data2 = setTab;
+setTab = function(t){
+  _origSetTab_data2(t);
+  if(t === 'dash'){
+    setTimeout(function(){
+      var vc = document.getElementById('view-container');
+      if(!vc || !vc.innerHTML) return;
+
+      // Tendance 7j
+      var trend = getMarketTrend7j();
+      var trendHtml = '';
+      if(trend){
+        var c = trend.delta>0.5?'#10b981':trend.delta<-0.5?'#ef4444':'#64748b';
+        var arrow = trend.delta>0.5?'↑':trend.delta<-0.5?'↓':'→';
+        var sign = trend.delta>=0?'+':'';
+        trendHtml = '<div style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+          +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Tendance 7 jours</div>'
+          +'<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">'
+          +'<div class="port-stat"><div class="port-stat-lbl">Score moy. actuel</div><div class="port-stat-val" style="color:#3b82f6">'+trend.now.toFixed(1)+'</div></div>'
+          +'<div class="port-stat"><div class="port-stat-lbl">J-7</div><div class="port-stat-val" style="color:#64748b">'+trend.prev.toFixed(1)+'</div></div>'
+          +'<div class="port-stat"><div class="port-stat-lbl">Variation</div><div class="port-stat-val" style="color:'+c+'"><span class="trend-arrow">'+arrow+'</span> '+sign+trend.delta.toFixed(1)+'</div></div>'
+          +'<div class="port-stat"><div class="port-stat-lbl">Base</div><div class="port-stat-val" style="color:#64748b">'+trend.n+'</div></div>'
+          +'</div></div>';
+      }
+
+      // Top movers
+      var movers = getTopMovers();
+      var gainers = movers.filter(function(m){return m.delta>0;}).slice(0,5);
+      var losers  = movers.filter(function(m){return m.delta<0;}).slice(0,5);
+      function moverRows(list){
+        return list.map(function(m){
+          var c = m.delta>0?'#10b981':'#ef4444';
+          var sign = m.delta>0?'+':'';
+          return '<div class="mover-row">'
+            +'<span class="mover-tk">'+m.r.ticker+'</span>'
+            +'<span style="font-size:9px;color:#64748b;flex:1">'+m.r.secteur+'</span>'
+            +'<span class="mover-delta" style="color:'+c+'">'+sign+m.delta+'</span>'
+            +'</div>';
+        }).join('');
+      }
+      var moversHtml = '<div style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Top movers (vs scan précédent)</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+        +'<div><div style="font-size:9px;color:#10b981;margin-bottom:4px">▲ Hausses</div>'+moverRows(gainers)+'</div>'
+        +'<div><div style="font-size:9px;color:#ef4444;margin-bottom:4px">▼ Baisses</div>'+moverRows(losers)+'</div>'
+        +'</div></div>';
+
+      // Carte monde
+      var mapHtml = '<div style="margin-top:10px;background:#0d1520;border:1px solid #1e2d45;border-radius:10px;padding:12px">'
+        +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">Score moyen par pays (cliquer pour filtrer)</div>'
+        +renderCountryMap()+'</div>';
+
+      vc.innerHTML += trendHtml + moversHtml + mapHtml;
+    }, 80);
+  }
+};
+
+// ══ BOUTON SCAN PARTIEL dans header ══
+setTimeout(function(){
+  var scanBtn = document.querySelector('button[onclick*="scanNow"]') ||
+    Array.from(document.querySelectorAll('button')).find(function(b){ return b.textContent.includes('Nouveau scan'); });
+  if(!scanBtn) return;
+  var wlBtn = document.createElement('button');
+  wlBtn.className = 'hbtn';
+  wlBtn.style.cssText = 'background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33';
+  wlBtn.innerHTML = '⚡ Scan WL';
+  wlBtn.title = 'Scan rapide sur la watchlist uniquement';
+  wlBtn.onclick = function(){
+    var tks = Object.keys(WATCHLIST);
+    if(!tks.length){ alert('Watchlist vide.'); return; }
+    // Save WL to cache file (user needs to download + push)
+    var json = JSON.stringify(tks);
+    var blob = new Blob([json], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'watchlist_cache.json';
+    a.click();
+    setTimeout(function(){
+      alert('Fichier watchlist_cache.json téléchargé.\n\nPour lancer le scan partiel :\n1. Placez ce fichier à la racine du repo\n2. Lancez : python generate.py --watchlist\n\nOu via GitHub Actions avec le paramètre --watchlist.');
+    }, 300);
+  };
+  scanBtn.parentNode.insertBefore(wlBtn, scanBtn);
+}, 400);
+
 render();
 resetFilters();
 
@@ -4074,6 +4367,80 @@ resetFilters();
   <input id="global-search-input" type="text" placeholder="🔍  Rechercher ticker, nom, note, secteur..." 
     oninput="runGlobalSearch(this.value)" onkeydown="gsKeyNav(event)" autocomplete="off" spellcheck="false">
   <div id="global-search-results"></div>
+</div></div>
+
+
+<!-- Onboarding -->
+<div id="onboarding-overlay" style="display:none">
+<div id="onboarding-box">
+  <div class="ob-progress" id="ob-progress"></div>
+  <div id="ob-steps">
+    <div class="ob-step active">
+      <div class="ob-title">👋 Bienvenue dans Stock Screener</div>
+      <div class="ob-body">Ce guide rapide vous présente les fonctions essentielles.<br><br>
+      <span class="ob-highlight">2000+ actions</span> scannées chaque jour automatiquement via Yahoo Finance — scores fondamentaux, techniques et momentum calculés pour chaque titre.</div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-title">📊 Les onglets</div>
+      <div class="ob-body">
+      <span class="ob-highlight">Toutes</span> — liste complète filtrée<br>
+      <span class="ob-highlight">Top 20</span> — meilleures opportunités du jour<br>
+      <span class="ob-highlight">WL</span> — votre watchlist personnelle<br>
+      <span class="ob-highlight">Dashboard</span> — vue d'ensemble du marché<br><br>
+      Raccourci clavier : <span class="ob-highlight">T P D W N 1 2</span> pour naviguer.</div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-title">⭐ Watchlist</div>
+      <div class="ob-body">Cliquez l'étoile ⭐ sur une action pour l'ajouter à votre watchlist.<br><br>
+      Dans l'onglet WL vous pouvez :<br>
+      • Définir un <span class="ob-highlight">score cible</span> (alerte automatique)<br>
+      • Ajouter des <span class="ob-highlight">notes personnelles</span> 📝<br>
+      • Tagger : Surveiller / Position / Long terme<br>
+      • Récupérer les <span class="ob-highlight">prix live</span> 🔄</div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-title">🔍 Recherche & Filtres</div>
+      <div class="ob-body">
+      Tapez <span class="ob-highlight">/</span> pour ouvrir la recherche globale (ticker, nom, secteur, notes).<br><br>
+      Utilisez les filtres : marché, secteur, score min, PEA, pays.<br><br>
+      Bouton <span class="ob-highlight">Critères</span> pour ajuster les seuils de scoring.</div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-title">🎯 C'est parti !</div>
+      <div class="ob-body">
+      Le screener tourne <span class="ob-highlight">automatiquement chaque jour</span> à 7h (lun-ven).<br><br>
+      Appuyez sur <span class="ob-highlight">?</span> à tout moment pour voir tous les raccourcis clavier.<br><br>
+      Bonne analyse ! 📈</div>
+    </div>
+  </div>
+  <div class="ob-nav">
+    <button class="ob-btn ob-btn-skip" onclick="skipOnboarding()">Passer</button>
+    <button class="ob-btn ob-btn-next" id="ob-next-btn" onclick="obNext()">Suivant →</button>
+  </div>
+</div></div>
+
+<!-- Raccourcis clavier -->
+<div id="shortcuts-overlay" onclick="if(event.target===this)closeShortcuts()">
+<div id="shortcuts-box">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h3 style="margin:0;font-size:14px">⌨️ Raccourcis clavier</h3>
+    <button onclick="closeShortcuts()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px">✕</button>
+  </div>
+  <div class="sc-grid">
+    <div class="sc-row"><span class="sc-key">T</span><span class="sc-label">Onglet Toutes</span></div>
+    <div class="sc-row"><span class="sc-key">P</span><span class="sc-label">Onglet PEA</span></div>
+    <div class="sc-row"><span class="sc-key">D</span><span class="sc-label">Onglet Divergences</span></div>
+    <div class="sc-row"><span class="sc-key">W</span><span class="sc-label">Onglet Watchlist</span></div>
+    <div class="sc-row"><span class="sc-key">N</span><span class="sc-label">Onglet Nouveaux</span></div>
+    <div class="sc-row"><span class="sc-key">1</span><span class="sc-label">Onglet Top 20</span></div>
+    <div class="sc-row"><span class="sc-key">2</span><span class="sc-label">Dashboard</span></div>
+    <div class="sc-row"><span class="sc-key">/</span><span class="sc-label">Recherche globale</span></div>
+    <div class="sc-row"><span class="sc-key">?</span><span class="sc-label">Raccourcis clavier</span></div>
+    <div class="sc-row"><span class="sc-key">Esc</span><span class="sc-label">Fermer modal/recherche</span></div>
+    <div class="sc-row"><span class="sc-key">↑↓</span><span class="sc-label">Navigation recherche</span></div>
+    <div class="sc-row"><span class="sc-key">Enter</span><span class="sc-label">Sélectionner résultat</span></div>
+  </div>
+  <button class="modal-btn modal-btn-cancel" onclick="closeShortcuts()" style="margin-top:16px;width:100%">Fermer</button>
 </div></div>
 
 </body></html>

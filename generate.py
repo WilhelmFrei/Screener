@@ -56,6 +56,20 @@ with open(csv_path, encoding='utf-8') as f:
 
 tickers = list(dict.fromkeys([r['ticker'] for r in tickers_data]))
 print('Tickers charges depuis tickers.csv: ' + str(len(tickers)))
+
+# Scan partiel si --watchlist
+if SCAN_WATCHLIST_ONLY:
+    try:
+        import json as _json
+        _wl_file = Path('watchlist_cache.json')
+        if _wl_file.exists():
+            _wl = list(_json.loads(_wl_file.read_text()))
+            tickers = [t for t in tickers if t in _wl]
+            print(f'Scan partiel WL: {len(tickers)} tickers')
+        else:
+            print('watchlist_cache.json introuvable - scan complet')
+    except Exception as _e:
+        print(f'WL filter error: {_e}')
 print('Dont PEA eligibles: ' + str(len(PEA_SET)))
 
 # ══════════════════════════════════════════════════════════════
@@ -468,6 +482,13 @@ print('HTML OK: ' + str(out))
 
 # ══ HISTORIQUE DES SCORES ══
 import datetime as _dt
+
+# ══ SCAN PARTIEL WATCHLIST ══
+import argparse
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument('--watchlist', action='store_true', help='Scan only WL tickers')
+_args, _ = _parser.parse_known_args()
+SCAN_WATCHLIST_ONLY = _args.watchlist
 hist_dir = Path('docs/history')
 hist_dir.mkdir(exist_ok=True)
 today_str = _dt.date.today().isoformat()
