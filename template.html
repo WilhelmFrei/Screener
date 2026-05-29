@@ -607,7 +607,6 @@ body.light .sc-row{border-color:#e2e8f010}
 <button class="hbtn" onclick="openBacktest()" style="background:#1e2d45;color:#a78bfa;border:1px solid #a78bfa44">&#128200; Backtest WL</button>
 <button class="hbtn" onclick="openPortfolio()" style="background:#1e2d45;color:#10b981;border:1px solid #10b98133">&#128184; Portfolio</button>
 <button class="hbtn" onclick="exportWatchlist()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33">&#11088; Export WL</button>
-<button class="hbtn" onclick="scanWL()" style="background:#1e2d45;color:#f59e0b;border:1px solid #f59e0b33" title="Exporte watchlist_cache.json pour scan partiel">&#9889; Scan WL</button>
 <button class="compact-toggle" onclick="openGlobalSearch()" title="Recherche globale (/)">&#128269; Recherche</button>
 <button class="compact-toggle" id="compact-btn" onclick="toggleCompact()" title="Vue condensée">&#9638; Compact</button>
 <button class="hbtn" onclick="filtersToURL()" style="background:#1e2d45;color:#3b82f6;border:1px solid #3b82f644">&#128279; Partager</button>
@@ -697,12 +696,7 @@ body.light .sc-row{border-color:#e2e8f010}
 <button class="modal-btn modal-btn-ok" onclick="importTickers()">&#10003; Appliquer</button>
 <button class="modal-btn modal-btn-cancel" onclick="closeImp()" style="margin-top:8px">Annuler</button>
 </div></div>
-<div class="modal-bg" id="modal-scan"><div class="modal" style="text-align:center">
-<h3>&#9889; Scan lance sur GitHub Actions</h3>
-<p style="color:#64748b;font-size:12px;margin:12px 0 16px;line-height:1.7">2000 actions a analyser.<br>Duree estimee: 30-60 min.<br>La page se rechargera automatiquement.</p>
-<div style="font-family:monospace;font-size:13px;color:#00d4aa;background:#0d1520;padding:12px;border-radius:8px;margin-bottom:14px" id="scan-countdown"></div>
-<button class="modal-btn modal-btn-cancel" onclick="document.getElementById('modal-scan').className='modal-bg'">Fermer</button>
-</div></div>
+
 <div class="guide-page" id="guide-page">
 <div class="guide-header">
 <div class="guide-title">&#128218; Guide des indicateurs</div>
@@ -1313,9 +1307,7 @@ var CFG=%%CFG%%;
 var IMP_DATA=null;
 var SCAN_DATE="%%DATE%%";
 var NSCAN=%%NSCAN%%;
-var GH_OWNER="VOTRE_USERNAME";
-var GH_REPO="screener";
-var GH_TOKEN="VOTRE_GH_TOKEN";
+
 
 function openYahoo(tk){window.open('https://finance.yahoo.com/quote/'+tk,'_blank');}
 
@@ -1894,18 +1886,6 @@ function importTickers(){
   if(notFound.length)alert(found.length+' ticker(s) trouves.\n'+notFound.length+' absents: '+notFound.join(', '));
 }
 
-function triggerScan(){
-  if(!GH_TOKEN||GH_TOKEN==='VOTRE_GH_TOKEN'){alert('Token GitHub non configure.');return;}
-  var url='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/actions/workflows/scan.yml/dispatches';
-  fetch(url,{method:'POST',headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main'})})
-  .then(function(r){
-    if(r.status===204||r.ok){
-      document.getElementById('modal-scan').className='modal-bg open';
-      var secs=3600,el=document.getElementById('scan-countdown');
-      var iv=setInterval(function(){secs--;var m=Math.floor(secs/60),s=secs%60;if(el)el.textContent='Rechargement dans '+m+'min '+(s<10?'0':'')+s+'s';if(secs<=0){clearInterval(iv);location.reload();}},1000);
-    }else r.text().then(function(t){alert('Erreur GitHub: '+r.status+'\n'+t);});
-  }).catch(function(e){alert('Erreur: '+e.message);});
-}
 
 // LOGIN SHA-256 gere dans le script isole ci-dessus
 var PWD_HASH='__PWD_HASH__'; // reference uniquement
@@ -4247,19 +4227,7 @@ setTab = function(t){
   }
 };
 
-// ══ BOUTON SCAN WL ══
-function scanWL(){
-  var tks = Object.keys(WATCHLIST);
-  if(!tks.length){ alert('Watchlist vide.'); return; }
-  var blob = new Blob([JSON.stringify(tks)], {type:'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'watchlist_cache.json';
-  a.click();
-  setTimeout(function(){
-    alert('watchlist_cache.json téléchargé.\n\nPour scan partiel :\n  python generate.py --watchlist\n\nPlacez le fichier à la racine du repo avant.');
-  }, 300);
-}
+
 
 render();
 resetFilters();
